@@ -202,7 +202,9 @@ def execution(start_rid, interval, number, gender_api_key):
 
 ### Execution ###
 #Standard Values: execution(158000,1000,52, "key")
+#Parameters are response ID to be found in the profile url, the interval at which to sample new parameters, the number of profiles to sample, and a key for the gender classification api.
 #Please get you API key from gender-api.com
+
 sample = execution(158000,1000,5, "key")
 
 
