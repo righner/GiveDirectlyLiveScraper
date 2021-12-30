@@ -29,7 +29,7 @@ def extract_recipient_data(rid):
     url = "https://live.givedirectly.org/newsfeed/a7de23c0-39af-4af3-9671-13dc38a85e26/"+str(rid)+"?context=newsfeed"
  
     profile = load_recipient_profile(url)   
-    details = get_recipient_details(profile)
+    details = get_recipient_details(profile,key)
     profile_data = get_survey_as_df(profile,"enrollment")
 
     payments = list(set(re.findall(r"payment_\d{1,2}",source)))
@@ -63,7 +63,7 @@ def load_recipient_profile(recipient_url):
     return BeautifulSoup(source, "lxml")
 
 
-def get_recipient_details(profile):
+def get_recipient_details(profile,key):
     """
     
 
@@ -71,7 +71,9 @@ def get_recipient_details(profile):
     ----------
     profile : BoutifulSoup
         A BeautifulSoup file containing data from a GD-Live profile.
-
+    key: str
+        A key for accessing the gender classification tool. Please get your personal API key from gender-api.com
+        
     Returns
     -------
     Pandas DataFrame
@@ -79,9 +81,9 @@ def get_recipient_details(profile):
 
     """
     name = profile.find("div", class_="card-name card-name-profile").text.strip()
-    myKey = "GQfxJNVTUPuusuknko"
-    url = "https://gender-api.com/get?key=" + myKey + "&name=" + name
-    response = urlopen(url)
+    
+    api_url = "https://gender-api.com/get?key=" + key + "&name=" + name
+    response = urlopen(api_url)
     decoded = response.read().decode('utf-8')
     data = json.loads(decoded)
     gender = data["gender"]
@@ -149,8 +151,9 @@ def get_profile_item(soup, container_name, html_class):
     container = soup.find("div", {"id" : re.compile(container_name)})
     return [item.text.strip() for item in container.find_all("div", class_=html_class)]
 
+
 #@profile
-def execution(start_rid, interval, number):
+def execution(start_rid, interval, number, gender_api_key):
     """
     
 
@@ -162,6 +165,8 @@ def execution(start_rid, interval, number):
         The interval at which to sample rid's.
     number : int
         The amount of profiles to sample.
+    gender_api_key: str
+        A key for accessing the gender classification tool. Please get your personal API key from gender-api.com
 
     Returns
     -------
@@ -169,7 +174,8 @@ def execution(start_rid, interval, number):
         A Pandas DataFrame containing the sampled GD-Live profiles.
 
     """
-    
+    global key
+    key = gender_api_key
     df = pd.DataFrame()
     #Start with 158000
     global rid
@@ -195,15 +201,10 @@ def execution(start_rid, interval, number):
     return df
 
 ### Execution ###
-#Standard Values: execution(158000,1000,52)
-sample = execution(158000,1000,52)
-
-#print(df)
-#sample.to_csv(r'C:\Users\XXX\Desktop\GiveDirectlyScrape.csv', index = None, header=True)
+#Standard Values: execution(158000,1000,52, "key")
+#Please get you API key from gender-api.com
+sample = execution(158000,1000,5, "key")
 
 
 
-    
-    
-
-
+   
