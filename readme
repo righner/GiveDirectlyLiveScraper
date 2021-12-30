@@ -1,0 +1,4 @@
+This small BeautifulSoup based script scrapes the website live.givedirectly.org.
+I found this website to be a potentially interesting data source for people who would like to do some analysis of what recipients of cash transfer programs spend their money on and how their lives change.
+But given the potential and actual inaccuracies of the data, it was first and foremost a programming exercise for me.
+It is ready to run, given you have installed the necessary packages. The execution function with the parameters is in the bottom of the script. Please also get your own API key from gender-api.com. 
