@@ -149,9 +149,6 @@ def get_profile_item(soup, container_name, html_class):
     container = soup.find("div", {"id" : re.compile(container_name)})
     return [item.text.strip() for item in container.find_all("div", class_=html_class)]
 
-
-### Execution ###
-
 #@profile
 def execution(start_rid, interval, number):
     """
@@ -196,11 +193,13 @@ def execution(start_rid, interval, number):
     df["localfx"] = df["amount"].str.extract(r"(?m)^(\d+).*")
     
     return df
+
+### Execution ###
 #Standard Values: execution(158000,1000,52)
 sample = execution(158000,1000,52)
 
 #print(df)
-sample.to_csv(r'C:\Users\Rainer\Desktop\GiveDirectlyScrape.csv', index = None, header=True)
+#sample.to_csv(r'C:\Users\XXX\Desktop\GiveDirectlyScrape.csv', index = None, header=True)
 
 
 
