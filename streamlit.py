@@ -55,6 +55,7 @@ def cloud(text, max_word, max_font, random):
 def WordCounter(text):
     import nltk
     nltk.download('averaged_perceptron_tagger')
+    nltk.download('punkt')
     import pandas as pd
 
     #print('PROPER NOUNS EXTRACTED :')
