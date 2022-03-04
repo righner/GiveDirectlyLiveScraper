@@ -1,9 +1,12 @@
 from google.cloud import bigquery
 import os
+import streamlit as st
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gbq_key.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = st.secrets.gcq_key
 
-client = bigquery.Client()
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+client = bigquery.Client(credentials=credentials)
 
 
 def load_recipient(payload):
