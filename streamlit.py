@@ -14,16 +14,16 @@ def filter_df(df, gender, question,campaign):
 def create_final_df():
     #https://towardsdatascience.com/how-to-clean-text-data-639375414a2f
     import nltk
-    nltk.download('stopwords')
-    from nltk.corpus import stopwords
+    #nltk.download('stopwords')
+    #from nltk.corpus import stopwords
 
-    stop_words = stopwords.words('english') + ['money', 'GD', 'first', 'transfer','biggest', 'hardship']
+    #stop_words = stopwords.words('english') + ['money', 'GD', 'first', 'transfer','biggest', 'hardship']
     
 
     from gbq_functions import get_aggregate_data
     df = get_aggregate_data()
 
-    df['agg_response'] = df['agg_response'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
+    #df['agg_response'] = df['agg_response'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
     print("Stopwords removed")
     return df
  
