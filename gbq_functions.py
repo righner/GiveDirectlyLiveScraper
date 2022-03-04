@@ -1,3 +1,4 @@
+from google.oauth2 import service_account
 from google.cloud import bigquery
 import os
 import streamlit as st
