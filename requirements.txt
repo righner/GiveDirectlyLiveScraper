@@ -4,7 +4,7 @@ wordcloud
 pandas
 matplotlib
 google-cloud-bigquery
-google-auth
+google-auth-oauthlib
 requests
 bs4
 regex
