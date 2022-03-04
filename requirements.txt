@@ -1,4 +1,7 @@
 streamlit
+nltk
+wordcloud
+pandas
 matplotlib
 google-cloud-bigquery
 google-auth
