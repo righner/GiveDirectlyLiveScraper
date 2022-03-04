@@ -1,0 +1,9 @@
+streamlit
+matplotlib
+google-cloud-bigquery
+google-auth
+requests
+bs4
+regex
+dask
+flair
