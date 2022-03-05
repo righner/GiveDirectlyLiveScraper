@@ -90,7 +90,7 @@ def main():
     st.write("# Exploring the responses")
     st.write("Data in the platform can be viewed profile by profile. But this makes it difficult to get a general overview. This dashboard aims to provide users with a tool to explore these results on an aggregate level, and according to relevant categories.")
     st.write("Below, you find a few options with which you can filter the data. You can also just leave the filter blank to see the results for all the data. If you are ready, just click “Apply” to start the analysis.")
-    st.write("*Please be aware that this dashboard is still a work in progress. If you encounter any issues or if you have question, please feel free to reach out to email in the “About” section below.*")
+    st.info("*Please be aware that this dashboard is still a work in progress. It only uses a sample of less than 10% of profiles on th GDLive platform. Some filter settings could lead to data being based on only very few responses, especially when filtering by question. If you encounter any issues or if you have question, please feel free to reach out to email in the “About” section below.*")
 
     from gbq_functions import get_aggregate_data
     agg_df = get_aggregate_data()
