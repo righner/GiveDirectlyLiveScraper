@@ -106,11 +106,11 @@ def main():
 
         
     
-    final_df = filter_df(final_df,gender,question,campaign)
-    
-    text = text_from_filter(final_df)
+
     try:
         if st.button("Apply"):
+	    final_df = filter_df(final_df,gender,question,campaign)    
+            text = text_from_filter(final_df)
             # st.image(image, width=100, use_column_width=True)
             st.write("## Word cloud")
             st.write(cloud(text, max_word, max_font, random), use_column_width=True)
