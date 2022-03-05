@@ -10,23 +10,7 @@ def filter_df(df, gender, question,campaign):
         df = df[df['campaign'].isin(campaign)]
     return df
 
-@st.cache
-def create_final_df():
-    #https://towardsdatascience.com/how-to-clean-text-data-639375414a2f
-    import nltk
-    #nltk.download('stopwords')
-    #from nltk.corpus import stopwords
 
-    #stop_words = stopwords.words('english') + ['money', 'GD', 'first', 'transfer','biggest', 'hardship']
-    
-
-    from gbq_functions import get_aggregate_data
-    df = get_aggregate_data()
-
-    #df['agg_response'] = df['agg_response'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
-    print("Stopwords removed")
-    return df
- 
 def text_from_filter(df,*args):
     
     text = " ".join(response for response in df.agg_response)
@@ -55,7 +39,6 @@ def cloud(text, max_word, max_font, random):
 def WordCounter(text):
     import nltk
     nltk.download('averaged_perceptron_tagger')
-    nltk.download('punkt')
     import pandas as pd
 
     #print('PROPER NOUNS EXTRACTED :')
@@ -109,7 +92,8 @@ def main():
     st.write("Below, you find a few options with which you can filter the data. You can also just leave the filter blank to see the results for all the data. If you are ready, just click “Apply” to start the analysis.")
     st.write("*Please be aware that this dashboard is still a work in progress. If you encounter any issues or if you have question, please feel free to reach out to email in the “About” section below.*")
 
-    final_df = create_final_df()
+    from gbq_functions import get_aggregate_data
+    final_df = get_aggregate_data()
     gender = st.multiselect("Gender",final_df["gender"].unique())
     question = st.multiselect("Question",final_df["question"].unique())
     campaign = st.multiselect("Campaign",final_df["campaign"].unique())
@@ -148,7 +132,7 @@ def main():
         st.info("The selection you made is too narrow. Please remove or change the filter.")
     
     st.write("# About")
-    st.write("This Dashboard was build  by me (Rainer) as Capstone project for the Pipeline Academy Data Engineering Bootcamp. If you want to see how it works, visit the projects [GitHub repository](https://github.com/rainermensing/GDLive-Explorer). \
+    st.write("This Dashboard was build  by me (Rainer) as Capstone project for the Pipeline Academy Data Engineering Bootcamp. If you want to see how it works, visit the projects GitHub repository\
         Also, please note that this is project is still work in progress. I am planning to add new features as I have time. Please feel free to reach out to me at [rainer.mensing@hotmail.de](mailto:rainer.mensing@hotmail.de)")
         
 
