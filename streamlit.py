@@ -109,7 +109,7 @@ def main():
 
     try:
         if st.button("Apply"):
-	    final_df = filter_df(final_df,gender,question,campaign)    
+            final_df = filter_df(agg_df,gender,question,campaign)    
             text = text_from_filter(final_df)
             # st.image(image, width=100, use_column_width=True)
             st.write("## Word cloud")
