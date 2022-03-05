@@ -93,10 +93,10 @@ def main():
     st.write("*Please be aware that this dashboard is still a work in progress. If you encounter any issues or if you have question, please feel free to reach out to email in the “About” section below.*")
 
     from gbq_functions import get_aggregate_data
-    final_df = get_aggregate_data()
-    gender = st.multiselect("Gender",final_df["gender"].unique())
-    question = st.multiselect("Question",final_df["question"].unique())
-    campaign = st.multiselect("Campaign",final_df["campaign"].unique())
+    agg_df = get_aggregate_data()
+    gender = st.multiselect("Gender",agg_df["gender"].unique())
+    question = st.multiselect("Question",agg_df["question"].unique())
+    campaign = st.multiselect("Campaign",agg_df["campaign"].unique())
 
     with st.expander("Optional: Configurate WordCloud"):
         max_word = st.slider("Max words", 5, 1000, 200)
@@ -109,8 +109,8 @@ def main():
 
     try:
         if st.button("Apply"):
-            final_df = filter_df(agg_df,gender,question,campaign)    
-            text = text_from_filter(final_df)
+            filtered_df = filter_df(agg_df,gender,question,campaign)    
+            text = text_from_filter(filtered_df)
             # st.image(image, width=100, use_column_width=True)
             st.write("## Word cloud")
             st.write(cloud(text, max_word, max_font, random), use_column_width=True)
