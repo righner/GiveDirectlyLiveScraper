@@ -141,6 +141,50 @@ def delete_old_participant_details(rid_list):
     print("Old rids deleted")
 
 
+def create_aggregate_table():
+    query = """SELECT gender.gender as gender, recipients.campaign,responses.payment,responses.usdollar,responses.question, STRING_AGG(responses.response) AS agg_response
+    FROM gdliveproject.tests.recipients
+    INNER JOIN gdliveproject.tests.gender
+    ON recipients.name = gender.name
+    INNER JOIN gdliveproject.tests.responses
+    ON recipients.recipient_id = responses.recipient_id
+    GROUP BY gender,recipients.campaign,responses.payment,responses.usdollar,responses.question;
+    """
+    job = client.query(query)
+    
+    # results as a dataframe
+    df = job.result().to_dataframe()
+    print("Data joined and downloaded")
+    import nltk
+    nltk.download('stopwords')
+    from nltk.corpus import stopwords
+
+    stop_words = stopwords.words('english') + ['money', 'GD', 'first', 'transfer','biggest', 'hardship']
+    
+    df['agg_response'] = df['agg_response'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
+
+    print("Stopwords deleted")
+    schema = [
+        bigquery.SchemaField("gender", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("campaign", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("payment", "INTEGER", mode="REQUIRED"),
+        bigquery.SchemaField("usdollar", "INTEGER",mode = "NULLABLE"),
+        bigquery.SchemaField("question", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("agg_response", "STRING", mode="REQUIRED"),
+    ]
+    job_config = bigquery.LoadJobConfig(
+        schema=schema,
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
+        )
+
+    job = client.load_table_from_dataframe(
+        df, "gdliveproject.tests.GDLive_aggregate" , job_config=job_config
+    )  # Make an API request.
+    job.result()
+
+    print("Aggregate data loaded")
+
+@st.cache
 def get_aggregate_data():
     query = """
     SELECT * 
