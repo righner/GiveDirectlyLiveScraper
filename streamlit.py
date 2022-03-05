@@ -130,7 +130,15 @@ def main():
                 st.dataframe(adj_df) 
     except ValueError:
         st.info("The selection you made is too narrow. Please remove or change the filter.")
-    
+
+    st.write("# Download the aggregate data")
+    st.write("You can also download the aggregate data directly. Please also note the stopwords have already been removed.")
+    st.download_button(
+     label="Download data as TSV (tab-seperated-values)",
+     data=agg_df.to_csv(sep="\t").encode('utf-8'),
+     file_name='GDLive_agg.tsv',
+     mime='text/tsv',)	
+	
     st.write("# About")
     st.write("This Dashboard was build  by me (Rainer) as Capstone project for the Pipeline Academy Data Engineering Bootcamp. If you want to see how it works, visit the projects GitHub repository\
         Also, please note that this is project is still work in progress. I am planning to add new features as I have time. Please feel free to reach out to me at [rainer.mensing@hotmail.de](mailto:rainer.mensing@hotmail.de)")
