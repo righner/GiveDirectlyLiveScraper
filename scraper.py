@@ -28,7 +28,7 @@ def main(start_rid, interval, number_batches, batch_size):
     """
 
             
-    sentiment_model = flair.models.TextClassifier.load('en-sentiment')
+    sentiment_model = 0 # flair.models.TextClassifier.load('en-sentiment')
     print("Sentiment Model loaded")
 
     #Start with 158000
@@ -52,28 +52,34 @@ def main(start_rid, interval, number_batches, batch_size):
         t = Timer()
         t.start()
         dag = []
-        loaded = 0
         skipped = 0
+
         for _ in range(0,batch_size):
             if rid not in completed_profiles:
-                #try:
-                dag.append(dask.delayed(scrape_profile,nout=2)(rid,completed_surveys,sentiment_model))
-                #except:
-                #    print("Error at recipient "+str(rid))
+                try:
+                    dag.append(dask.delayed(scrape_profile,nout=2)(rid,completed_surveys,sentiment_model))
+                except Exception as e:
+                    print("Error at rid "+str(rid))
+                    print(e)
                 rid += interval
-                loaded += 1
+                
                 scraped.append(rid)
             else:
                 rid += interval
                 print(str(rid)+" already completed") 
                 skipped += 1
         finish = rid
-        recipients_payload, responses_payload = create_payloads(dask.compute(*dag))
-        load_recipient(recipients_payload)
-        print("Finished scraping meta data of "+str(loaded)+" recipients between rid "+str(start)+" and "+str(finish)+" with interval "+str(interval)+
-                ". Skipped "+str(skipped)+" complete profiles")
-        load_response(responses_payload)
-        print("Finished scraping responses of "+str(loaded)+" recipients between rid "+str(start)+" and "+str(finish)+" with interval "+str(interval))
+        dask.visualize(*dag)
+        recipients_payload, responses_payload, loaded, empty, error = create_payloads(dask.compute(*dag))
+        try:
+            print("Finished scraping "+str(len(scraped))+" profiles between rid "+str(start)+" and "+str(finish)+" with interval "+str(interval)+"\n""  Loaded:"+str(loaded)+"\n""  Empty:"+str(empty)+"\n""  Parsin Errors:"+str(error)+"\n""  Skipped "+str(skipped)+" complete profiles")
+
+            load_response(responses_payload)
+            load_recipient(recipients_payload)
+
+        except Exception as e:
+            print( "Error while loading this payload:", e)
+            print(responses_payload)
         t.avg_time(batch_size)
 
     print(scraped)
@@ -83,13 +89,22 @@ def main(start_rid, interval, number_batches, batch_size):
 def create_payloads(dask_output):
     recipients_payload = []
     responses_payload = []
+    loaded = 0
+    empty = 0
+    error = 0
     for load in dask_output:
-        try:
-            recipients_payload.append(load[0][0])
-            responses_payload.append(load[1][0])
-        except:
-            print("Error while parsing this load:"+str(load))
-    return recipients_payload, responses_payload
+        if load != "Profile does not exist": 
+            try:
+                recipients_payload.append(load[0][0])
+                responses_payload.append(load[1][0])
+                #print(load[1][0])
+                loaded += 1
+            except:
+                print("Error while parsing this load:"+str(load))
+                error += 1
+        else:
+            empty += 1
+    return recipients_payload, responses_payload, loaded, empty, error
 
 
 
@@ -100,16 +115,31 @@ def scrape_profile(rid,completed_surveys,sentiment_model):
         
         url = "https://live.givedirectly.org/newsfeed/a7de23c0-39af-4af3-9671-13dc38a85e26/"+str(rid)+"?context=newsfeed"
 
-        profile, source = dask.delayed(load_recipient_profile,nout=2)(url,rid)  
+        profile, source = load_recipient_profile(url,rid)
+
         recipient = dask.delayed(get_recipient_details)(profile,rid)
 
         responses = dask.delayed(get_recipient_surveys)(profile,rid,source,completed_surveys,sentiment_model)
+        
         return dask.compute(recipient,responses)
-    except AttributeError:
 
-        print("     Attribute error at rid "+str(rid))
-        pass
+    except AttributeError as e: 
+          
+        try:
+            friendly_error =  friendly_error(profile)
+            if friendly_error == "Sorry, the recipient you're looking for can't be found":
+                return "Profile does not exist"
+            else:
+                print("Enountered unknown friendly; ",friendly_error)
+        except:                  
+            print("Unknown Attribute error at rid "+str(rid)+"\n""   ",e)
+            pass
 
+def friendly_error(profile):
+    friendly_error = profile.find("h1", class_="friendly-error").text.strip()
+    #print(friendly_error)
+    return friendly_error
+    
 
 def get_recipient_surveys(profile,rid,source,completed_surveys,sentiment_model):
     """
@@ -144,11 +174,8 @@ def get_recipient_surveys(profile,rid,source,completed_surveys,sentiment_model):
     for payment in payments:
         payment_id = str(rid)+"_"+re.findall(r"([1-9]+)",payment)[0]
         if payment_id not in completed_surveys:
-            try:
                 responses.append(get_survey_jsons(rid,profile,payment,sentiment_model))
                 #print("     Payment "+payment+" extracted")
-            except IndexError:
-                print("     Likely no survey questions asked for "+payment+" in "+str(rid))
         else:
             print("     Skipped survey "+payment_id)
         
@@ -296,8 +323,10 @@ def get_survey_jsons(rid,profile, survey,sentiment_model):
             "localfx":local_amount,
             "question":question,           
             "response":response})
-    
-    return responses_list[0]
+    try:
+        return responses_list[0]
+    except IndexError:
+        print("     Likely no survey questions asked for "+survey+" in "+str(rid))
 
 #@profile
 def get_profile_item(soup, container_name, html_class):
@@ -360,8 +389,11 @@ def parse_timestamp(timestamp):
 
 
 ### Execution ###
-#Standard Values: main(158000,1000,,10)
+#Standard Values: main(158000,10,62,100)
+#Please get you API key from gender-api.com
 total = Timer()
 total.start()
-main(158009,1,1,1)
+main(158000,10,62,100)
 total.stop()
+#print(df)
+#sample.to_csv(r'C:\Users\Rainer\Desktop\GiveDirectlyScrape.csv', index = None, header=True)
