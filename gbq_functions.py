@@ -2,8 +2,7 @@ from google.oauth2 import service_account
 from google.cloud import bigquery
 import os
 import streamlit as st
-
-#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = st.secrets.gcq_key
+import logging
 
 credentials = service_account.Credentials.from_service_account_info(
     st.secrets["gcp_service_account"]
@@ -29,8 +28,12 @@ def load_recipient(payload):
         #write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
         )
     job = client.load_table_from_json(payload, "gdliveproject.tests.recipients",job_config=job_config)
-    job.result()
-    print("details of recipients loaded")
+    try:
+        job.result()
+        logging.info("details of recipients loaded")
+    except:
+        logging.error("Error loading this recipient info payload to BigQuery:""\n"+str(payload))
+
 
 
 def load_response(payload):
@@ -47,11 +50,14 @@ def load_response(payload):
     ]
     job_config = bigquery.LoadJobConfig(
         schema=schema,
-        #write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
         )
     job = client.load_table_from_json(payload, "gdliveproject.tests.responses",job_config=job_config)
-    job.result()
-    print("responses loaded")
+    try:
+        job.result()
+        logging.info("responses loaded")
+        return True
+    except:
+        logging.error("Error loading this response payload to BigQuery:""\n"+str(payload))
 
 def load_gender_table(payload):
     from google.cloud import bigquery
@@ -81,7 +87,7 @@ def load_gender_table(payload):
     job.result()  # Wait for the job to complete.
 
     table = client.get_table("gdliveproject.tests.gender")  # Make an API request.
-    print(
+    logging.info(
         "Loaded {} rows and {} columns to {}".format(
             table.num_rows, len(table.schema), "gdliveproject.tests.gender"
         )
@@ -126,20 +132,66 @@ def get_names():
     # results as a dataframe
     return job.result().to_dataframe()
 
-def delete_old_participant_details(rid_list):
+def delete_old_participant_details():
     query = """
-    DELETE gdliveproject.tests.recipients
-    WHERE recipient_id IN UNNEST(@rid_list) AND EXTRACT(DATE FROM last_updated) != CURRENT_DATE()
-    """
-    job_config = bigquery.QueryJobConfig(
-    query_parameters=[
-        bigquery.ArrayQueryParameter("rid_list", "INT64", rid_list),
-    ])
+    CREATE TABLE IF NOT EXISTS gdliveproject.tests.updated AS (
+        WITH added_row AS (
+        SELECT
+            recipient_id,
+            name,
+            age,
+            occupation,
+            completed,
+            country,
+            campaign,  
+            last_updated,
+            ROW_NUMBER() OVER(PARTITION BY recipient_id ORDER BY last_updated DESC) AS row_number
+        FROM gdliveproject.tests.recipients
+        )
+        SELECT
+        *
+        FROM added_row
+        WHERE row_number = 1
+        ORDER BY recipient_id 
+        );
+    DROP TABLE gdliveproject.tests.recipients;
+    ALTER TABLE gdliveproject.tests.updated RENAME TO recipients    
+        """
 
-    job = client.query(query,job_config=job_config)
+    job = client.query(query)
     job.result()
-    print("Old rids deleted")
+    logging.info("Old rids deleted")
 
+
+def try_create_recipient_response_tables():
+    query = """
+    -- recipients table
+    CREATE TABLE IF NOT EXISTS gdliveproject.tests.recipients (
+        recipient_id INTEGER NOT NULL,
+        name STRING NOT NULL,
+        age INTEGER,
+        occupation STRING,
+        completed boolean NOT NULL,
+        country STRING NOT NULL,
+        campaign STRING NOT NULL,
+        last_updated TIMESTAMP NOT NULL );
+
+    -- responses table
+    CREATE TABLE IF NOT EXISTS gdliveproject.tests.responses (
+        response_id STRING NOT NULL,
+        recipient_id INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        payment INTEGER NOT NULL,
+        usdollar INTEGER,
+        localfx INTEGER,
+        question STRING NOT NULL,
+        response STRING NOT NULL,
+    );  
+            """
+
+    job = client.query(query)
+    job.result()
+    logging.info("Recipient & response tables created (if not existing)")
 
 def create_aggregate_table():
     query = """SELECT gender.gender as gender, recipients.campaign,responses.payment,responses.usdollar,responses.question, STRING_AGG(responses.response) AS agg_response
@@ -154,7 +206,7 @@ def create_aggregate_table():
     
     # results as a dataframe
     df = job.result().to_dataframe()
-    print("Data joined and downloaded")
+    logging.info("Data joined and downloaded")
     import nltk
     nltk.download('stopwords')
     from nltk.corpus import stopwords
@@ -163,7 +215,7 @@ def create_aggregate_table():
     
     df['agg_response'] = df['agg_response'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
 
-    print("Stopwords deleted")
+    logging.info("Stopwords deleted")
     schema = [
         bigquery.SchemaField("gender", "STRING", mode="REQUIRED"),
         bigquery.SchemaField("campaign", "STRING", mode="REQUIRED"),
@@ -182,7 +234,7 @@ def create_aggregate_table():
     )  # Make an API request.
     job.result()
 
-    print("Aggregate data loaded")
+    logging.info("Aggregate data loaded")
 
 @st.cache
 def get_aggregate_data():
