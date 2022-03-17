@@ -1,5 +1,25 @@
 import matplotlib.pyplot as plt
 import streamlit as st
+from wordcloud import WordCloud
+from google.oauth2 import service_account
+from google.cloud import bigquery
+
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
+client = bigquery.Client(credentials=credentials)
+
+@st.cache
+def get_aggregate_data():
+    query = """
+    SELECT * 
+    FROM `gdliveproject.tests.GDLive_aggregate`
+    """
+    # labelling our query job
+    job = client.query(query)
+    
+    # results as a dataframe
+    return job.result().to_dataframe()
 
 def filter_df(df, gender, question,campaign):
     if len(gender) != 0:
@@ -20,7 +40,6 @@ def text_from_filter(df,*args):
 
 def cloud(text, max_word, max_font, random):
     
-    from wordcloud import WordCloud
     wc = WordCloud(mode = "RGBA",background_color=None, max_words=max_word,
     max_font_size=max_font, random_state=random,width=1600, height=900)
 
@@ -92,7 +111,6 @@ def main():
     st.write("Below, you find a few options with which you can filter the data. You can also just leave the filter blank to see the results for all the data. If you are ready, just click “Apply” to start the analysis.")
     st.info("*Please be aware that this dashboard is still a work in progress. It only uses a sample of less than 10% of profiles on th GDLive platform. Some filter settings could lead to data being based on only very few responses, especially when filtering by question. If you encounter any issues or if you have question, please feel free to reach out to the email in the “About” section below.*")
 
-    from gbq_functions import get_aggregate_data
     agg_df = get_aggregate_data()
     gender = st.multiselect("Gender",agg_df["gender"].unique())
     question = st.multiselect("Question",agg_df["question"].unique())

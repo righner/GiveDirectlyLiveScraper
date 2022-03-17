@@ -8,5 +8,3 @@ google-auth-oauthlib
 requests
 bs4
 regex
-dask
-flair

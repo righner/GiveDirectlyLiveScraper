@@ -1,13 +1,9 @@
-from google.oauth2 import service_account
 from google.cloud import bigquery
-import os
-import streamlit as st
 import logging
+import os
+import nltk
 
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
-)
-client = bigquery.Client(credentials=credentials)
+client = bigquery.Client()
 
 
 def load_recipient(payload):
@@ -60,7 +56,6 @@ def load_response(payload):
         logging.error("Error loading this response payload to BigQuery:""\n"+str(payload))
 
 def load_gender_table(payload):
-    from google.cloud import bigquery
     job_config = bigquery.LoadJobConfig(
     # Specify a (partial) schema. All columns are always written to the
     # table. The schema is used to assist in data type definitions.
@@ -207,7 +202,6 @@ def create_aggregate_table():
     # results as a dataframe
     df = job.result().to_dataframe()
     logging.info("Data joined and downloaded")
-    import nltk
     nltk.download('stopwords')
     from nltk.corpus import stopwords
 
@@ -236,14 +230,4 @@ def create_aggregate_table():
 
     logging.info("Aggregate data loaded")
 
-@st.cache
-def get_aggregate_data():
-    query = """
-    SELECT * 
-    FROM `gdliveproject.tests.GDLive_aggregate`
-    """
-    # labelling our query job
-    job = client.query(query)
-    
-    # results as a dataframe
-    return job.result().to_dataframe()
+
