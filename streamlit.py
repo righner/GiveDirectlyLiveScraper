@@ -117,7 +117,7 @@ def main():
     question = st.multiselect("Question",agg_df["question"].unique())
     campaign = st.multiselect("Campaign",agg_df["campaign"].unique())
 
-    min_amount,max_amount = st.select_slider("Payout in USD", options=agg_df["usdollar"],values=(0,agg_df["usdollar"].max()))
+    min_amount,max_amount = st.select_slider("Payout in USD", options=agg_df["usdollar"],value=(0,agg_df["usdollar"].max()))
 
     with st.expander("Optional: Configurate WordCloud"):
         max_word = st.slider("Max words", 5, 1000, 200)
