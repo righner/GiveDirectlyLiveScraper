@@ -11,6 +11,5 @@ COPY gcp_key.json .
 
 ENTRYPOINT [ "python3" ]
 
-
 CMD ["./scraper/main.py" ]
 

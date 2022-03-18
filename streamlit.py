@@ -21,7 +21,8 @@ def get_aggregate_data():
     # results as a dataframe
     return job.result().to_dataframe()
 
-def filter_df(df, gender, question,campaign):
+def filter_df(df, gender, question,campaign,min_amount,max_amount):
+    df = df[df['usdollar'].isin(range(min_amount,max_amount))]
     if len(gender) != 0:
         df = df[df['gender'].isin(gender)]
     if len(question) != 0:
@@ -116,6 +117,8 @@ def main():
     question = st.multiselect("Question",agg_df["question"].unique())
     campaign = st.multiselect("Campaign",agg_df["campaign"].unique())
 
+    min_amount,max_amount = st.select_slider("Payout in USD", options=agg_df["usdollar"],values=(0,agg_df["usdollar"].max()))
+
     with st.expander("Optional: Configurate WordCloud"):
         max_word = st.slider("Max words", 5, 1000, 200)
         max_font = st.slider("Max Font Size", 50, 350, 150)
@@ -127,7 +130,7 @@ def main():
 
     try:
         if st.button("Apply"):
-            filtered_df = filter_df(agg_df,gender,question,campaign)    
+            filtered_df = filter_df(agg_df,gender,question,campaign,min_amount,max_amount)    
             text = text_from_filter(filtered_df)
             # st.image(image, width=100, use_column_width=True)
             st.write("## Word cloud")

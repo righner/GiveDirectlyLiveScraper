@@ -137,7 +137,7 @@ if __name__ == "__main__":
     #Please get you API key from gender-api.com
     total = Timer()
     total.start()
-    main(start_rid=158629,interval=10,number_batches=1,batch_size=10)
+    main(start_rid=158000,interval=10,number_batches=62,batch_size=100)
     logging.info(total.stop())
     #logging.info(df)
     #sample.to_csv(r'C:\Users\Rainer\Desktop\GiveDirectlyScrape.csv', index = None, header=True)
