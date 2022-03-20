@@ -9,15 +9,10 @@ import pandas as pd
 from google.oauth2 import service_account
 from google.cloud import bigquery
 
-import os
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "C:\\Users\\Rainer\\Documents\\GitHub\\GiveDirectlyLiveScraper\\gcp_key.json" #Needed on local machine
-
-client = bigquery.Client()
-
-#credentials = service_account.Credentials.from_service_account_info(
-#    st.secrets["gcp_service_account"]
-#)
-#client = bigquery.Client(credentials=credentials)
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
+client = bigquery.Client(credentials=credentials)
 
 @st.cache(ttl = 86400, show_spinner = False) #Cache df for 24h
 def get_aggregate_data():
