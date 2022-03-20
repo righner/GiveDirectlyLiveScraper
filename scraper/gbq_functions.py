@@ -204,7 +204,7 @@ def create_aggregate_table():
     nltk.download('stopwords')
     from nltk.corpus import stopwords
 
-    stop_words = stopwords.words('english') + ['money', 'GD','GiveDirectly','Give','Directly', 'first','second','third', 'transfer','biggest', 'hardship']
+    stop_words = stopwords.words('english') + ['money', 'GD','GiveDirectly','Give','Directly', 'first','second','third', 'transfer','transfers','KES','kes','UGX','ugx','biggest', 'hardship']
     
     df['agg_response'] = df['agg_response'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
 

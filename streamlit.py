@@ -196,8 +196,8 @@ def main():
      mime='text/tsv',)	
 	
     st.write("# About")
-    st.write("This Dashboard was build  by me (Rainer) as Capstone project for the Pipeline Academy Data Engineering Bootcamp. If you want to see how it works, visit the projects [GitHub repository](https://github.com/rainermensing/GDLive-Explorer)\
-        Also, please note that this is project is still work in progress. I am planning to add new features as I have time. Please feel free to reach out to me at [rainer.mensing@hotmail.de](mailto:rainer.mensing@hotmail.de)")
+    st.write("If you want to see how this works, visit the projects' [GitHub repository](https://github.com/rainermensing/GDLive-Explorer)\
+        Also, please note that this is still work in progress. I am planning to add new features as I have time. Please feel free to reach out to me at [rainer.mensing@hotmail.de](mailto:rainer.mensing@hotmail.de)")
         
 
 
