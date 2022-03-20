@@ -1,4 +1,3 @@
-import sys
 import requests
 from bs4 import BeautifulSoup
 import regex as re
@@ -14,6 +13,8 @@ from dask.diagnostics import ProgressBar
 pbar = ProgressBar()                
 pbar.register() # global registration
 import logging
+
+#Settings for local logging on local machine:
 #logging.basicConfig(filename=str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
 #logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 

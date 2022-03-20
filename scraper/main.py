@@ -2,8 +2,6 @@
 #system
 import sys
 import os
-#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "gcp_key.json" #Needed on local machine
-
 #import flair
 
 #dask

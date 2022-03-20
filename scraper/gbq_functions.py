@@ -1,6 +1,5 @@
 from google.cloud import bigquery
 import logging
-import os
 import nltk
 
 client = bigquery.Client()
@@ -55,7 +54,7 @@ def load_response(payload):
     except:
         logging.error("Error loading this response payload to BigQuery:""\n"+str(payload))
 
-def load_gender_table(payload):
+def replace_gender_table(payload):
     job_config = bigquery.LoadJobConfig(
     # Specify a (partial) schema. All columns are always written to the
     # table. The schema is used to assist in data type definitions.
@@ -66,9 +65,9 @@ def load_gender_table(payload):
         bigquery.SchemaField("name", bigquery.enums.SqlTypeNames.STRING),
         # Indexes are written if included in the schema by name.
         bigquery.SchemaField("gender", bigquery.enums.SqlTypeNames.STRING),
-        bigquery.SchemaField("accuracy", bigquery.enums.SqlTypeNames.INTEGER),
-        bigquery.SchemaField("sample_size", bigquery.enums.SqlTypeNames.INTEGER),
-
+        bigquery.SchemaField("genderScale", bigquery.enums.SqlTypeNames.FLOAT),
+        bigquery.SchemaField("score", bigquery.enums.SqlTypeNames.FLOAT),
+        bigquery.SchemaField("probabilityCalibrated", bigquery.enums.SqlTypeNames.FLOAT),
     ],
     # Optionally, set the write disposition. BigQuery appends loaded rows
     # to an existing table by default, but with WRITE_TRUNCATE write
@@ -205,7 +204,7 @@ def create_aggregate_table():
     nltk.download('stopwords')
     from nltk.corpus import stopwords
 
-    stop_words = stopwords.words('english') + ['money', 'GD', 'first', 'transfer','biggest', 'hardship']
+    stop_words = stopwords.words('english') + ['money', 'GD','GiveDirectly','Give','Directly', 'first','second','third', 'transfer','biggest', 'hardship']
     
     df['agg_response'] = df['agg_response'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
 
