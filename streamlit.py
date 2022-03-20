@@ -86,6 +86,11 @@ def WordCounter(text):
     noun_df = pd.DataFrame(noun_list,columns=["Noun"]).groupby(["Noun"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
     verb_df = pd.DataFrame(verb_list,columns=["Verb"]).groupby(["Verb"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
     adj_df = pd.DataFrame(adj_list,columns=["Adjective"]).groupby(["Adjective"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
+    
+    #Let index start from 1 instead of 0
+    noun_df.index = noun_df.index + 1
+    verb_df.index = verb_df.index + 1
+    adj_df.index = adj_df.index + 1
 
     return noun_df,verb_df,adj_df
 
@@ -156,7 +161,7 @@ def main():
     
     
     st.write("## Step III: Calculate Wordcount")
-    st.warning("This could take a long time (up to 30 min with no filters), depending on your filter settings. If you decide to stop a calculation, you likely have to refresh the page to do another analysis.")
+    st.warning("This could take a long time (up to 5-10 min with no filters), depending on your filter settings. If you decide to stop a calculation, you likely have to refresh the page to do another analysis.")
     try:
         
         if st.button("Calculate Wordcount",key = "count"):
@@ -176,13 +181,14 @@ def main():
                     st.write("### Adjectives")   
                     st.dataframe(adj_df)
         else:
+            st.write("This will calculate the count of nouns, verbs and adjectives seperately and display them in tables, sorted by frequency.")
             st.info("Hit 'Calculate wordcount' when you are ready")            
 
     except ValueError:
         st.info("The selection you made is too narrow. Please remove or change the filter.")
 
     st.write("# Download the aggregate data")
-    st.write("You can also download the aggregate data directly. Please also note that stopwords (i.e. 'the', 'I', 'a', etc.) have already been removed.")
+    st.write("You can also download the aggregate data directly. Stopwords (i.e. 'the', 'I', 'a', etc.) have already been removed.")
     st.download_button(
      label="Download data as TSV (tab-seperated-values)",
      data=agg_df.to_csv(sep="\t").encode('utf-8'),
