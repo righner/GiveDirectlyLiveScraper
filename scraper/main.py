@@ -2,13 +2,13 @@
 #system
 import sys
 import os
-from dotenv import load_dotenv
-load_dotenv() # take environment variables from .env.
 #import flair
 
 #dask
 import dask
 
+#time
+from datetime import datetime
 
 #logging
 from dask.diagnostics import ProgressBar
@@ -16,25 +16,20 @@ pbar = ProgressBar()
 pbar.register() # global registration
 from tqdm import tqdm
 import logging
-logging.basicConfig(filename=str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
+logging.basicConfig(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 from timer import Timer
 
-#time
-from datetime import datetime
 
-#custome 
+
+#custom 
 from gbq_functions import load_recipient,load_response,get_complete_rids,get_complete_surveys, delete_old_participant_details,try_create_recipient_response_tables,create_aggregate_table
 from scraper import scrape_profile, create_payloads
 from gender_table import create_gender_table
 
-#Pofiling cmd: kernprof -l -v "G:\OneDrive\Documents\Projects\GDLive Scraper\Script.py"
-
-
-
 
 ### Functions ###
-#@profile
+
 def main(start_rid, interval, number_batches, batch_size):
     """
     Loads profiles from the GDLive Website into a Database (i.e. BigQuery).
@@ -126,9 +121,21 @@ def main(start_rid, interval, number_batches, batch_size):
         t.avg_time(batch_size)
 
     #logging.info(scraped)
+    
     delete_old_participant_details()
-    gender_api_key = os.environ['gender_api_key']    
-
-    create_gender_table(gender_api_key)
+    
+    create_gender_table()
 
     create_aggregate_table()
+
+
+if __name__ == "__main__":
+    ### Execution ###
+    #Standard Values: main(158000,10,62,100)
+    #Please get you API key from gender-api.com
+    total = Timer()
+    total.start()
+    main(start_rid=158000,interval=10,number_batches=62,batch_size=100)
+    logging.info(total.stop())
+    #logging.info(df)
+    #sample.to_csv(r'C:\Users\Rainer\Desktop\GiveDirectlyScrape.csv', index = None, header=True)

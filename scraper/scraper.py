@@ -1,4 +1,3 @@
-import sys
 import requests
 from bs4 import BeautifulSoup
 import regex as re
@@ -14,8 +13,10 @@ from dask.diagnostics import ProgressBar
 pbar = ProgressBar()                
 pbar.register() # global registration
 import logging
-logging.basicConfig(filename=str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+#Settings for local logging on local machine:
+#logging.basicConfig(filename=str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
+#logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 #time parsing
 from datetime import datetime
@@ -369,12 +370,4 @@ def parse_timestamp(timestamp):
     return int(year)
 
 
-### Execution ###
-#Standard Values: main(158000,10,62,100)
-#Please get you API key from gender-api.com
-total = Timer()
-total.start()
-main(158629,10,1,1)
-logging.info(total.stop())
-#logging.info(df)
-#sample.to_csv(r'C:\Users\Rainer\Desktop\GiveDirectlyScrape.csv', index = None, header=True)
+
