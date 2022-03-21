@@ -184,7 +184,7 @@ def main():
     
     
     st.write("## Step III: Calculate Wordcount")
-    st.warning("This could take a long time (up to 5-10 min with no filters), depending on your filter settings. If you decide to stop a calculation, you likely have to refresh the page to do another analysis.")
+    st.warning("This could take some a moment , depending on your filter settings (up to two minutes on the unfiltered dataset). If you decide to stop a calculation, you likely have to refresh the page to do another analysis.")
     try:
         
         if st.button("Calculate Wordcount",key = "count"):

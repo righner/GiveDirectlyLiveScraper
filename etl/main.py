@@ -2,7 +2,6 @@
 #system
 import sys
 import os
-#import flair
 
 #dask
 import dask
@@ -20,17 +19,12 @@ logging.basicConfig(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 from timer import Timer
 
-
-
 #custom 
 from gbq_functions import load_recipient,load_response,get_complete_rids,get_complete_surveys, delete_old_participant_details,try_create_recipient_response_tables,create_aggregate_table
 from scraper import scrape_profile, create_payloads
-from gender_table import create_gender_table
+import gender_table
 
-
-### Functions ###
-
-def main(start_rid, interval, number_batches, batch_size):
+def main(start_rid=158000,interval=10,number_batches=62,batch_size=100): #Standard samples about 10% of the platform, i.e. every 10th profile until ID 220000
     """
     Loads profiles from the GDLive Website into a Database (i.e. BigQuery).
 
@@ -40,14 +34,13 @@ def main(start_rid, interval, number_batches, batch_size):
         The recipient ID from which to start loading the GD-Live profile. Please not that the minimum is around 158000.
     interval : int
         The interval at which to sample rid's.
-    number : int
-        The amount of profiles to load.    
-
+    number_batches : int
+        The number of batches to load.    
+    batch_size: int
+        The size of each batch
     """
 
             
-    sentiment_model = 0 # flair.models.TextClassifier.load('en-sentiment')
-    logging.info("Sentiment Model loaded")
     try_create_recipient_response_tables()
     #Start with 158000
     rid = start_rid
@@ -58,13 +51,6 @@ def main(start_rid, interval, number_batches, batch_size):
     completed_surveys = get_complete_surveys()["survey_id"].values
     logging.info("List of complete surveys loaded")
 
-    #logging.info(completed_surveys)
-    #logging.info(completed["recipient_id"])
-    #completed_profiles = [0]
-    #Load profile by profile into the databse
-    
-
-    
     for i in tqdm(range(0,number_batches)):
         start = rid
         t = Timer()
@@ -76,7 +62,7 @@ def main(start_rid, interval, number_batches, batch_size):
         for _ in range(0,batch_size):
             if rid not in completed_profiles:
                 try:
-                    dag.append(dask.delayed(scrape_profile,nout=2)(rid,completed_surveys,sentiment_model))
+                    dag.append(dask.delayed(scrape_profile,nout=2)(rid,completed_surveys))
                 except Exception as e:
                     logging.warning("Error at rid "+str(rid))
                     logging.info(e)
@@ -124,18 +110,23 @@ def main(start_rid, interval, number_batches, batch_size):
     
     delete_old_participant_details()
     
-    create_gender_table()
+    gender_table.main()
 
     create_aggregate_table()
 
 
 if __name__ == "__main__":
-    ### Execution ###
-    #Standard Values: main(158000,10,62,100)
-    #Please get you API key from gender-api.com
-    total = Timer()
-    total.start()
-    main(start_rid=158000,interval=10,number_batches=62,batch_size=100)
-    logging.info(total.stop())
-    #logging.info(df)
-    #sample.to_csv(r'C:\Users\Rainer\Desktop\GiveDirectlyScrape.csv', index = None, header=True)
+    from sys import argv
+    if len(argv) == 4:
+        total = Timer()
+        total.start()
+        main(start_rid=argv[0],interval=argv[1],number_batches=argv[2],batch_size=argv[3])
+        logging.info(total.stop())
+    elif len(argv) == 0:
+        total = Timer()
+        total.start()
+        logging.info("Running with default values: start_rid=158000,interval=10,number_batches=62,batch_size=100")
+        main()
+        logging.info(total.stop())
+    else:
+        logging.error("Incorrect number of arguments passed. Should be 4: start_rid,interval ,number_batches ,batch_size")
