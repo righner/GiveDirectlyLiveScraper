@@ -3,7 +3,7 @@ import streamlit as st
 from wordcloud import WordCloud
 
 import nltk
-nltk.download(['averaged_perceptron_tagger','punkt'])
+nltk.download(['averaged_perceptron_tagger'])
 import pandas as pd
 import numpy as np
 
