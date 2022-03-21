@@ -1,5 +1,6 @@
 streamlit==1.7.0
 nltk==3.7
+dask==2022.2.1
 wordcloud==1.8.1
 pandas==1.4.1
 matplotlib==3.5.1

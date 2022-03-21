@@ -2,19 +2,18 @@ import requests
 from bs4 import BeautifulSoup
 import regex as re
 import hashlib
-#import flair
 
 #dask
 import dask
 
 
 #logging
-from dask.diagnostics import ProgressBar
-pbar = ProgressBar()                
-pbar.register() # global registration
+#from dask.diagnostics import ProgressBar
+#pbar = ProgressBar()                
+#pbar.register() # global registration
 import logging
 
-#Settings for local logging on local machine:
+#Settings for logging scraper on local machine:
 #logging.basicConfig(filename=str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
 #logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
@@ -23,14 +22,26 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 
-from timer import Timer
-
-#Pofiling cmd: kernprof -l -v "G:\OneDrive\Documents\Projects\GDLive Scraper\Script.py"
- 
-
 ### Functions ###
   
 def create_payloads(dask_product):
+    """
+    Takes the scraper output from a batch processes using dask and parses it into two json payloads to be loaded into BigQuery.
+
+    Parameters
+    ----------
+    dask_product : list
+        A list of recipients information and survey data in json format.
+    
+
+    Returns
+    -------
+    recipients_payload: list
+        Payload of recipient data in json format.
+    responses_payload: list
+        Payload of surveys and their containing questions and responses in json format. 
+    Metadata the batch, i.e. counts and errors.
+    """
     recipients_payload = []
     responses_payload = []
     loaded = 0
@@ -74,7 +85,25 @@ def create_payloads(dask_product):
     return recipients_payload, responses_payload, loaded, no_profile, parsing_error, no_updates,unknown_error,empty_response, no_questions
 
 
-def scrape_profile(rid,completed_surveys,sentiment_model):
+def scrape_profile(rid,completed_surveys):
+    """
+    Takes an rid and returns both recipient details as well as survey responses. Extraction of both is executed in parallel using dask.
+    Even though nested dask setups are not recommended, it turned out to be slighly faster doing it.
+    Also takes a list of already completed profiles to be skipped.
+
+    Parameters
+    ----------
+    rid : int
+        The recipient ID of the GD-Live profile url.
+    completed_surveys: list
+        A list of surveys already in the databse that can be skipped
+
+    Returns
+    -------
+    profile data: list
+        List of recipient data as well as surveys and their containing questions and responses in json format.
+
+    """
     
     try:
         
@@ -85,7 +114,7 @@ def scrape_profile(rid,completed_surveys,sentiment_model):
         if source:
             recipient = dask.delayed(get_recipient_details)(profile,rid)
 
-            responses = dask.delayed(get_recipient_surveys)(profile,rid,source,completed_surveys,sentiment_model)
+            responses = dask.delayed(get_recipient_surveys)(profile,rid,source,completed_surveys)
  
             return dask.compute(recipient,responses)
         else:
@@ -100,7 +129,7 @@ def scrape_profile(rid,completed_surveys,sentiment_model):
 
 
 
-def get_recipient_surveys(profile,rid,source,completed_surveys,sentiment_model):
+def get_recipient_surveys(profile,rid,source,completed_surveys):
     """
     Extracts survey data from a profile and returns  the responses as a json payload.
     It first loads the initial enrollment survey (if given), then checks how many follow up surveys were conducted, and finally extracts and loads each of them into a list.
@@ -111,12 +140,15 @@ def get_recipient_surveys(profile,rid,source,completed_surveys,sentiment_model):
         A BeautifulSoup file containing data from a GD-Live profile.
     rid : int
         The recipient ID of the GD-Live profile url.
-    source : html source code
-        Source code containing the profile site.
+    source : str
+        HTML of profile site.
+    completed_surveys: list
+        A list of surveys already in the databse that can be skipped    
 
     Returns
     -------
-    responses: List of surveys and their responses in json format
+    responses: list
+        List of surveys and their containing questions and responses in json format.
 
     """
     responses = []
@@ -124,7 +156,7 @@ def get_recipient_surveys(profile,rid,source,completed_surveys,sentiment_model):
     enrollment_id = str(rid)+"_"+str(0)
     if enrollment_id not in completed_surveys:
         try:
-            responses= [*responses,*get_survey_jsons(rid,profile,"enrollment",sentiment_model)] #the '*' operator gets all items from the list
+            responses= [*responses,*get_survey_jsons(rid,profile,"enrollment")] #the '*' operator gets all items from the list
         except AttributeError:
             logging.info("     No survey class 'enrollment' found in rid "+str(rid))
             skip_count += 1
@@ -136,7 +168,7 @@ def get_recipient_surveys(profile,rid,source,completed_surveys,sentiment_model):
     for payment in payments:
         payment_id = str(rid)+"_"+re.findall(r"([1-9]+)",payment)[0]
         if payment_id not in completed_surveys:
-                responses= [*responses,*get_survey_jsons(rid,profile,payment,sentiment_model)] 
+                responses= [*responses,*get_survey_jsons(rid,profile,payment)] 
                 #logging.info("     Payment "+payment+" extracted")
         else:
             logging.info("     Skipped survey "+payment_id)
@@ -155,17 +187,21 @@ def get_recipient_surveys(profile,rid,source,completed_surveys,sentiment_model):
 
 def load_recipient_profile(recipient_url,rid):
     """
+    Requests the data from profile page and return it both as BeautifulSoup and as string. 
     
-
     Parameters
     ----------
     recipient_url : str
         A string containing the url of the GD-Live profile.
+    rid: int
+        A recipient ID.
 
     Returns
     -------
-    BeautifulSoup
+    profile: BeautifulSoup
         Returns a BeautifulSoup containing the profile data.
+    Source: str
+        HTML of profile site.
 
     """
     try:
@@ -184,7 +220,7 @@ def load_recipient_profile(recipient_url,rid):
 
 def get_recipient_details(profile,rid):
     """
-    
+    Takes the BeautifulSoup of a profile and returns the details of a recipient (i.e. name, age, campaign etc.) in json format.
 
     Parameters
     ----------
@@ -234,9 +270,9 @@ def get_recipient_details(profile,rid):
 
 
 #@profile
-def get_survey_jsons(rid,profile, survey,sentiment_model):
+def get_survey_jsons(rid,profile, survey):
     """
-    Extracts the questions and repsponses of a specific survey from a GDLive profile. 
+    Takes the BeautifulSoup of a profile page and extracts the questions and repsponses of a specific survey. 
 
     Parameters
     ----------
@@ -247,7 +283,8 @@ def get_survey_jsons(rid,profile, survey,sentiment_model):
 
     Returns
     -------
-    survey data: List containing json format survey data.
+    survey data: list
+        List containing json format survey data.
 
     """
     
@@ -314,7 +351,7 @@ def get_survey_jsons(rid,profile, survey,sentiment_model):
 #@profile
 def get_profile_item(soup, container_name, html_class):
     """
-    
+    Takes a BeautifulSoup and extracts all class items from a specific container. 
 
     Parameters
     ----------
@@ -327,8 +364,8 @@ def get_profile_item(soup, container_name, html_class):
 
     Returns
     -------
-    list
-        Returns a list containing a part of a GD-Live profile survey response.
+    Container item(s): list
+        Returns a list containing all items of a certain class in a container.
 
     """
 
