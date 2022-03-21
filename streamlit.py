@@ -5,9 +5,11 @@ from wordcloud import WordCloud
 import nltk
 nltk.download(['averaged_perceptron_tagger','punkt'])
 import pandas as pd
+import numpy as np
 
 from google.oauth2 import service_account
 from google.cloud import bigquery
+
 
 credentials = service_account.Credentials.from_service_account_info(
     st.secrets["gcp_service_account"]
@@ -71,18 +73,25 @@ def WordCounter(text):
     noun_list = []
     verb_list = []
     adj_list = []
+    
+    
 
-    sentences = nltk.sent_tokenize(text)
-    for sentence in sentences:
-        words = nltk.word_tokenize(sentence)
-        tagged = nltk.pos_tag(words)
-        for (word, tag) in tagged:
-            if tag in ['NN','NNP','NNS']: # If the word is a noun
-                noun_list.append(word)
-            elif tag in ['VB','VBD','VBG','VBN','VBP','VBZ']: # If the word is a verb
-                verb_list.append(word)
-            elif tag in ['JJR','JJS']: # If the word is an adjective
-                adj_list.append(word)    
+    temp = np.char.replace(text,"."," ") # Use instead of nltks slow sent_tokenize()
+    temp = np.char.replace(temp,","," ") #remove commas
+    temp = np.char.replace(temp,"!"," ") #remove exclamations marks
+    clean_text = np.char.replace(temp,"?"," ") #remove question marks
+    words = np.char.split(clean_text) #split text into single words
+
+    pos_tag_v = np.vectorize(nltk.pos_tag) #creating a numpy version of nltks' tagger funtion
+    tagged = pos_tag_v(words)
+
+    for (word, tag) in tagged:
+        if tag in ['NN','NNP','NNS']: # If the word is a noun
+            noun_list.append(word)
+        elif tag in ['VB','VBD','VBG','VBN','VBP','VBZ']: # If the word is a verb
+            verb_list.append(word)
+        elif tag in ['JJR','JJS']: # If the word is an adjective
+            adj_list.append(word)    
     noun_df = pd.DataFrame(noun_list,columns=["Noun"]).groupby(["Noun"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
     verb_df = pd.DataFrame(verb_list,columns=["Verb"]).groupby(["Verb"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
     adj_df = pd.DataFrame(adj_list,columns=["Adjective"]).groupby(["Adjective"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
