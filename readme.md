@@ -1,4 +1,4 @@
-# Analysis of Cash transfer recipient survey data. 
+# Scraping and analysing cash transfer recipient survey data 
 ## Context
 Since about 10 years, an NGO called GiveDirectly is providing unconditional cash transfers to extremely poor individuals, mostly in Easter Africa (Kenya/Uganda). Part of their philosophy is to present themselves as an experiment to proof that unconditional cash transfers are vastly more efficient than most other forms of aid in most contexts (i.e. whenever it is possible and a market exists locally where ppl. can spend the money).
 To create transparency about their efficiency, their project is constantly been studied by economists using randomized controlled trials (RCTs). But in addition they also provide raw survey data from recipients on their [website](live.givedirectly.org), where respondents answer question like "How did you spend the money?" and "How did it change your life?".

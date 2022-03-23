@@ -4,35 +4,29 @@ from wordcloud import WordCloud
 
 import nltk
 nltk.download(['averaged_perceptron_tagger'])
-import pandas as pd
-import numpy as np
 
-from dask import delayed, compute
 from dask.diagnostics import ProgressBar
 pbar = ProgressBar()
 pbar.register()
 
-from google.oauth2 import service_account
 from google.cloud import bigquery
 
+import sys,os
+sys.path.append('./')
+from etl.WordCounter import WordCounter
+from etl.gbq_functions import get_aggregate_data
 
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
-)
-client = bigquery.Client(credentials=credentials)
+if os.getcwd() == "/app/gdlive-explorer":  #If on streamlit cloud, get client via streamlit secrets  
+    from streamlit_app.streamlit_cloud_client import get_stcloud_client
+    client = get_stcloud_client()
+else: #get it from the GCP environment
+    client = bigquery.Client()
+    
 
 @st.cache(ttl = 86400, show_spinner = False) #Cache df for 24h
-def get_aggregate_data():
-    query = """
-    SELECT * 
-    FROM `gdliveproject.tests.GDLive_aggregate`
-    """
-    # labelling our query job
-    job = client.query(query)
-    
-    # results as a dataframe
-    df = job.result().to_dataframe()
-    return df[df['usdollar'] < 1000] # Filter entries with wrong payment amount
+def cache_aggregate_data():
+    return get_aggregate_data()
+
 
 def filter_df(df, gender, question,campaign,enrollments,min_amount,max_amount):
     if enrollments == False:
@@ -71,52 +65,6 @@ def cloud(text, max_word, max_font, random):
     plt.axis('off')
     st.pyplot(fig)
 
-def WordCounter(text): 
-
-
-    #print('PROPER NOUNS EXTRACTED :')
-    noun_list = []
-    verb_list = []
-    adj_list = []
-    
-    
-
-    temp = np.char.replace(text,"."," ") # Use instead of nltks slow sent_tokenize()
-    temp = np.char.replace(temp,","," ") #remove commas
-    temp = np.char.replace(temp,"!"," ") #remove exclamations marks
-    clean_text = np.char.replace(temp,"?"," ") #remove question marks    
-    words = str.split(str(clean_text)) #split text into single words #FYI using np.char.split here caused an Index Error when trying to split the np array into partitions using np.array_split.
-    print("Text cleaned and split")
-
-    tasks = []
-    split_array = np.array_split(words,15) #A test on the full dataset showed that 15 parallel dask tasks are optimal.
-    for array in split_array:
-        task = delayed(nltk.pos_tag)(array)
-        tasks.append(task)        
-
-    dask_product = compute(*tasks)
-     #creating a numpy version of nltks' tagger funtion
-    print("Words tagged")
-    for tagged in dask_product:
-        for (word, tag) in tagged:
-            if tag in ['NN','NNP','NNS']: # If the word is a noun
-                noun_list.append(word)
-            elif tag in ['VB','VBD','VBG','VBN','VBP','VBZ']: # If the word is a verb
-                verb_list.append(word)
-            elif tag in ['JJR','JJS']: # If the word is an adjective
-                adj_list.append(word)    
-        noun_df = pd.DataFrame(noun_list,columns=["Noun"]).groupby(["Noun"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
-        verb_df = pd.DataFrame(verb_list,columns=["Verb"]).groupby(["Verb"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
-        adj_df = pd.DataFrame(adj_list,columns=["Adjective"]).groupby(["Adjective"]).size().reset_index(name='#').sort_values("#",ascending=False).reset_index(drop=True)
-        
-    #Let index start from 1 instead of 0
-    noun_df.index = noun_df.index + 1
-    verb_df.index = verb_df.index + 1
-    adj_df.index = adj_df.index + 1
-    print("Wordcount complete")
-
-    return noun_df,verb_df,adj_df
-
 def sizable_text(px,text):
     st.markdown("""
     <style>
@@ -136,7 +84,7 @@ def main():
     layout="wide",  # Can be "centered" or "wide". In the future also "dashboard", etc.
 	initial_sidebar_state="auto",  # Can be "auto", "expanded", "collapsed"
     )
-
+    
     st.title("GDLive Data Explorer")
     st.write("Welcome to the unofficial **GDLive Data Explorer**. This dashboard allows you to view text data published on [GiveDirectly](https://www.givedirectly.org/about/)'s [GDLive platform](https://live.givedirectly.org/) in an aggregate format. Since 2009, the NGO GiveDirectly is providing unconditional cash transfers to extremely poor individuals, mostly in Africa. Part of their mission is to show that unconditional cash transfers are a better way to aid people suffering from extreme poverty than most other forms of material aid in most contexts (i.e. whenever it is possible and a market exists locally where the money can be exchanged for goods).")
     st.write("In order to proof this, their projects have been -and continue to be - rigorously evaluated by renown economists using randomized controlled trials (RCTs). The [published results](https://www.givedirectly.org/cash-research-explorer/#) show that the impact of cash transfers is overwhelmingly positive. Especially prejudices that poor individuals will use the 'free money' to buy drugs or alcohol, or that it will create dependencies, could be dismissed early on. Quite the opposite. Recipients often use the funds to invest into the future. Furthermore, there are even so called “general equilibrium effects”, meaning that not only do those benefit that receive the transfers, but also those that live in the same community, since the money is spend and invested locally.")
@@ -147,7 +95,7 @@ def main():
     st.info("*Please be aware that this dashboard is still a work in progress. It only uses a sample of less than 10% of profiles on th GDLive platform. Some filter settings could lead to data being based on only very few responses, especially when filtering by question. If you encounter any issues or if you have question, please feel free to reach out to the email in the “About” section below.*")
 
     with st.spinner("Loading aggregate dataset..."):
-        agg_df = get_aggregate_data()
+        agg_df = cache_aggregate_data()
 
     st.write("## Step I: Set the filter")
     gender = st.multiselect("Gender",agg_df["gender"].unique())

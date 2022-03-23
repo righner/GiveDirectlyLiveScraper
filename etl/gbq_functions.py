@@ -2,7 +2,14 @@ from google.cloud import bigquery
 import logging
 import nltk
 
-client = bigquery.Client()
+import sys,os
+sys.path.append('./')
+if os.getcwd() == "/app/gdlive-explorer":  #If on streamlit cloud, get client via streamlit secrets  
+    from streamlit_app.streamlit_cloud_client import get_stcloud_client
+    client = get_stcloud_client()
+else: #get it from the GCP environment
+    client = bigquery.Client()
+    
 
 
 def load_recipient(payload):
@@ -230,3 +237,14 @@ def create_aggregate_table():
     logging.info("Aggregate data loaded")
 
 
+def get_aggregate_data():
+    query = """
+    SELECT * 
+    FROM `gdliveproject.tests.GDLive_aggregate`
+    """
+    # labelling our query job
+    job = client.query(query)
+    
+    # results as a dataframe
+    df = job.result().to_dataframe()
+    return df[df['usdollar'] < 1000]

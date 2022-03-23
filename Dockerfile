@@ -1,15 +1,15 @@
-FROM python:3.9
+FROM python:3.9-slim
+
+# Allow statements and log messages to immediately appear in the Knative logs
+ENV PYTHONUNBUFFERED True
 
 WORKDIR /GDLive-Explorer
 
-COPY scraper_requirements.txt .
-RUN pip install -r scraper_requirements.txt
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-COPY ./scraper ./scraper
-COPY ./logs ./logs
-COPY gcp_key.json .
+COPY ./etl ./etl
+COPY ./streamlit_app ./streamlit_app
+#COPY gcp_key.json . #For local-use containers
 
-ENTRYPOINT [ "python3" ]
-
-CMD ["./scraper/main.py" ]
-
+#Entrypoints will be defined from the outside, since they differ for the scraper and streamlit

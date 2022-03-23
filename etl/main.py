@@ -1,7 +1,6 @@
 ### Requirements ###
 #system
 import sys
-import os
 
 #dask
 import dask
@@ -15,7 +14,9 @@ pbar = ProgressBar()
 pbar.register() # global registration
 from tqdm import tqdm
 import logging
-logging.basicConfig(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
+
+#import os
+#logging.basicConfig(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO) #For local logging
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 from timer import Timer
 
@@ -24,7 +25,7 @@ from gbq_functions import load_recipient,load_response,get_complete_rids,get_com
 from scraper import scrape_profile, create_payloads
 import gender_table
 
-def main(start_rid=158000,interval=10,number_batches=62,batch_size=100): #Standard samples about 10% of the platform, i.e. every 10th profile until ID 220000
+def main(start_rid,interval,number_batches,batch_size): #Standard samples about 10% of the platform, i.e. every 10th profile until ID 220000
     """
     Loads profiles from the GDLive Website into a Database (i.e. BigQuery).
 
@@ -122,11 +123,11 @@ if __name__ == "__main__":
         total.start()
         main(start_rid=argv[0],interval=argv[1],number_batches=argv[2],batch_size=argv[3])
         logging.info(total.stop())
-    elif len(argv) == 0:
-        total = Timer()
-        total.start()
-        logging.info("Running with default values: start_rid=158000,interval=10,number_batches=62,batch_size=100")
-        main()
-        logging.info(total.stop())
+    #elif len(argv) == 0:
+    #    total = Timer()
+    #    total.start()
+    #    logging.info("Running with default values: start_rid=158000,interval=10,number_batches=62,batch_size=100")
+    #    main()
+    #    logging.info(total.stop())
     else:
         logging.error("Incorrect number of arguments passed. Should be 4: start_rid,interval ,number_batches ,batch_size")
