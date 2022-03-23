@@ -11,11 +11,10 @@ pbar.register()
 
 from google.cloud import bigquery
 
-import sys,os
-print(os.getcwd()) 
-sys.path.append('..')
-from etl.gbq_functions import get_aggregate_data
+import sys
+sys.path.append('./')
 from etl.WordCounter import WordCounter
+from etl.gbq_functions import get_aggregate_data
 
 try:
     client = bigquery.Client()

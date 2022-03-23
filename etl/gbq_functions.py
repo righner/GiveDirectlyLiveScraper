@@ -2,7 +2,15 @@ from google.cloud import bigquery
 import logging
 import nltk
 
-client = bigquery.Client()
+import sys
+sys.path.append('./')
+try:
+    client = bigquery.Client()
+except Exception as e:
+    print(e)
+    print("Streamlit Cloud detected: Using Streamlit Cloud access GCP client.")
+    from streamlit.streamlit_cloud_client import get_stcloud_client
+    client = get_stcloud_client()
 
 
 def load_recipient(payload):
