@@ -2,12 +2,12 @@ from google.cloud import bigquery
 import logging
 import nltk
 
-import sys
+import sys,os
 sys.path.append('./')
-try:    
+if os.getcwd() == "/app/gdlive-explorer":  #If on streamlit cloud, get client via streamlit secrets  
     from streamlit_app.streamlit_cloud_client import get_stcloud_client
     client = get_stcloud_client()
-except:
+else: #get it from the GCP environment
     client = bigquery.Client()
     
 
