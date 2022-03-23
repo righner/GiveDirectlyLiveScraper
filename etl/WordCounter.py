@@ -8,9 +8,10 @@ import numpy as np
 from etl.gbq_functions import get_aggregate_data
 
 from dask import delayed, compute
-from dask.diagnostics import ProgressBar
-pbar = ProgressBar()
-pbar.register()
+#Progress Bar for WordCount
+#from dask.diagnostics import ProgressBar
+#pbar = ProgressBar()
+#pbar.register()
 
 def pickle_full_sample_count():
     df = get_aggregate_data()
@@ -19,7 +20,7 @@ def pickle_full_sample_count():
     with open('full_sample_count.pkl', 'wb') as file:
         pickle.dump([noun_df,verb_df,adj_df], file)
     #...
-    #Commit to GitHub to be added
+    #Commit to GitHub or Cloud Storage to be added
 
 def WordCounter(text): 
 
