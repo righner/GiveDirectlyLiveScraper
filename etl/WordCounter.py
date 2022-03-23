@@ -18,6 +18,8 @@ def pickle_full_sample_count():
     noun_df,verb_df,adj_df = WordCounter(text)
     with open('full_sample_count.pkl', 'wb') as file:
         pickle.dump([noun_df,verb_df,adj_df], file)
+    #...
+    #Commit to GitHub to be added
 
 def WordCounter(text): 
 
