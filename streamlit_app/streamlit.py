@@ -15,7 +15,7 @@ import sys,os
 sys.path.append('./')
 from etl.WordCounter import WordCounter
 from etl.gbq_functions import get_aggregate_data
-os.getcwd()
+
 try:    
     from streamlit_app.streamlit_cloud_client import get_stcloud_client
     client = get_stcloud_client()
@@ -83,7 +83,7 @@ def main():
     layout="wide",  # Can be "centered" or "wide". In the future also "dashboard", etc.
 	initial_sidebar_state="auto",  # Can be "auto", "expanded", "collapsed"
     )
-
+    st.write(os.getcwd())
     st.title("GDLive Data Explorer")
     st.write("Welcome to the unofficial **GDLive Data Explorer**. This dashboard allows you to view text data published on [GiveDirectly](https://www.givedirectly.org/about/)'s [GDLive platform](https://live.givedirectly.org/) in an aggregate format. Since 2009, the NGO GiveDirectly is providing unconditional cash transfers to extremely poor individuals, mostly in Africa. Part of their mission is to show that unconditional cash transfers are a better way to aid people suffering from extreme poverty than most other forms of material aid in most contexts (i.e. whenever it is possible and a market exists locally where the money can be exchanged for goods).")
     st.write("In order to proof this, their projects have been -and continue to be - rigorously evaluated by renown economists using randomized controlled trials (RCTs). The [published results](https://www.givedirectly.org/cash-research-explorer/#) show that the impact of cash transfers is overwhelmingly positive. Especially prejudices that poor individuals will use the 'free money' to buy drugs or alcohol, or that it will create dependencies, could be dismissed early on. Quite the opposite. Recipients often use the funds to invest into the future. Furthermore, there are even so called “general equilibrium effects”, meaning that not only do those benefit that receive the transfers, but also those that live in the same community, since the money is spend and invested locally.")
