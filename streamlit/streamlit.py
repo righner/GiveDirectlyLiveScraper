@@ -12,7 +12,7 @@ pbar.register()
 from google.cloud import bigquery
 
 import sys 
-sys.path.append('./etl')
+sys.path.append('../')
 from etl.gbq_functions import get_aggregate_data
 from etl.WordCounter import WordCounter
 
