@@ -15,7 +15,7 @@ pbar = ProgressBar()
 pbar.register() # global registration
 from tqdm import tqdm
 import logging
-logging.basicConfig(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
+#logging.basicConfig(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO) #For local logging
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 from timer import Timer
 
