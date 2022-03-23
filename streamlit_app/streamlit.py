@@ -11,11 +11,11 @@ pbar.register()
 
 from google.cloud import bigquery
 
-import sys
+import sys,os
 sys.path.append('./')
 from etl.WordCounter import WordCounter
 from etl.gbq_functions import get_aggregate_data
-
+os.getcwd()
 try:    
     from streamlit_app.streamlit_cloud_client import get_stcloud_client
     client = get_stcloud_client()
