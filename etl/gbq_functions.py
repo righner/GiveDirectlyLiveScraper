@@ -230,3 +230,14 @@ def create_aggregate_table():
     logging.info("Aggregate data loaded")
 
 
+def get_aggregate_data():
+    query = """
+    SELECT * 
+    FROM `gdliveproject.tests.GDLive_aggregate`
+    """
+    # labelling our query job
+    job = client.query(query)
+    
+    # results as a dataframe
+    df = job.result().to_dataframe()
+    return df[df['usdollar'] < 1000]
