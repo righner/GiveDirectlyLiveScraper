@@ -11,5 +11,3 @@ COPY ./streamlit ./streamlit
 
 ENTRYPOINT [ "python3" ]
 
-#CMD ["./etl/main.py" ]
-
