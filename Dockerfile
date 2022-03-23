@@ -7,7 +7,7 @@ RUN pip install -r requirements.txt
 
 COPY ./etl ./etl
 COPY ./streamlit ./streamlit
-COPY gcp_key.json .
+#COPY gcp_key.json . #For local-use containers
 
 ENTRYPOINT [ "python3" ]
 
