@@ -11,7 +11,8 @@ pbar.register()
 
 from google.cloud import bigquery
 
-import sys 
+import sys,os
+print(os.getcwd()) 
 sys.path.append('..')
 from etl.gbq_functions import get_aggregate_data
 from etl.WordCounter import WordCounter
