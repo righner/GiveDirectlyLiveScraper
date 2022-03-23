@@ -16,13 +16,11 @@ sys.path.append('./')
 from etl.WordCounter import WordCounter
 from etl.gbq_functions import get_aggregate_data
 
-try:
-    client = bigquery.Client()
-except Exception as e:
-    print(e)
-    print("Streamlit Cloud detected: Using Streamlit Cloud access GCP client.")
-    from streamlit_cloud_client import get_stcloud_client
+try:    
+    from streamlit_app.streamlit_cloud_client import get_stcloud_client
     client = get_stcloud_client()
+except:
+    client = bigquery.Client()
 
 @st.cache(ttl = 86400, show_spinner = False) #Cache df for 24h
 def cache_aggregate_data():

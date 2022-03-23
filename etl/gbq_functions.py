@@ -4,13 +4,12 @@ import nltk
 
 import sys
 sys.path.append('./')
-try:
-    client = bigquery.Client()
-except Exception as e:
-    print(e)
-    print("Streamlit Cloud detected: Using Streamlit Cloud access GCP client.")
-    from streamlit.streamlit_cloud_client import get_stcloud_client
+try:    
+    from streamlit_app.streamlit_cloud_client import get_stcloud_client
     client = get_stcloud_client()
+except Exception as e:
+    client = bigquery.Client()
+    
 
 
 def load_recipient(payload):
