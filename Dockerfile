@@ -9,5 +9,4 @@ COPY ./etl ./etl
 COPY ./streamlit ./streamlit
 #COPY gcp_key.json . #For local-use containers
 
-ENTRYPOINT [ "python3" ]
-
+#Entrypoints will be defined from the outside, since they differ for the scraper and streamlit
