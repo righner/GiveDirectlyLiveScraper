@@ -44,7 +44,7 @@ def filter_df(df, gender, question,campaign,enrollments,min_amount,max_amount):
     return df
 
 
-def cloud(text, max_word, max_font, random):
+def plot_WordCloud(text, max_word, max_font, random):
     
     wc = WordCloud(mode = "RGBA",background_color=None, max_words=max_word,
     max_font_size=max_font, random_state=random,width=1600, height=900)
@@ -55,11 +55,11 @@ def cloud(text, max_word, max_font, random):
     # create coloring from image
 
     # show the figure
-    plt.figure(figsize=(16,9))
-    plt.imshow(wc,interpolation="bilinear")
+    fig, ax = plt.subplots()
+    ax.imshow(wc)
     plt.axis('off')
-    plt.show()
-
+    st.pyplot(fig)
+    
 
 def sizable_text(px,text):
     st.markdown("""
@@ -126,7 +126,7 @@ def main():
                 filtered_df = filter_df(agg_df,gender,question,campaign,enrollments,min_amount,max_amount)    
                 text = " ".join(response for response in filtered_df.agg_response)
                 # st.image(image, width=100, use_column_width=True)
-                st.image(cloud(text, max_word, max_font, random), use_column_width=True)
+                plot_WordCloud(text, max_word, max_font, random)
         
         else:
             st.info("Hit 'Create Wordcloud' when you are ready")
