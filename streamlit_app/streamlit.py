@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import streamlit as st
 from wordcloud import WordCloud
+import hashlib
+from datetime import datetime
 
 import nltk
 nltk.download(['averaged_perceptron_tagger'])
@@ -13,13 +15,14 @@ from google.cloud import bigquery
 
 import sys,os
 sys.path.append('./')
-from etl.WordCounter import WordCounter
+from WordCounter import WordCounter, pickle_count, read_pickled_count
 from etl.gbq_functions import get_aggregate_data
 
 if os.getcwd() == "/app/gdlive-explorer":  #If on streamlit cloud, get client via streamlit secrets  
     from streamlit_app.streamlit_cloud_client import get_stcloud_client
     client = get_stcloud_client()
 else: #get it from the GCP environment
+    #os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "gcp_key.json" #Needed on local machine
     client = bigquery.Client()
     
 
@@ -41,14 +44,7 @@ def filter_df(df, gender, question,campaign,enrollments,min_amount,max_amount):
     return df
 
 
-def text_from_filter(df,*args):
-    
-    text = " ".join(response for response in df.agg_response)
-
-    print("Aggregate ready for analysis")
-    return text
-
-def cloud(text, max_word, max_font, random):
+def plot_WordCloud(text, max_word, max_font, random):
     
     wc = WordCloud(mode = "RGBA",background_color=None, max_words=max_word,
     max_font_size=max_font, random_state=random,width=1600, height=900)
@@ -59,11 +55,11 @@ def cloud(text, max_word, max_font, random):
     # create coloring from image
 
     # show the figure
-    plt.figure(figsize=(16,9))
     fig, ax = plt.subplots()
     ax.imshow(wc)
     plt.axis('off')
     st.pyplot(fig)
+    
 
 def sizable_text(px,text):
     st.markdown("""
@@ -75,6 +71,8 @@ def sizable_text(px,text):
     """%(px,px), unsafe_allow_html=True)
 
     st.markdown('<p class="font%s">%s</p>'%(px,text), unsafe_allow_html=True)
+
+
 
 def main():
 
@@ -104,6 +102,11 @@ def main():
     amount_range = agg_df.sort_values("usdollar")["usdollar"].dropna().unique().astype(int)
     min_amount,max_amount = st.select_slider("Payout in USD", options=amount_range,value=(1,amount_range.max()))
     #min_amount,max_amount = (0,1000)
+    
+    month = datetime.now().strftime('%Y%m_')    
+    filter_hash = hashlib.md5(bytes(str(gender)+str(question)+str(campaign)+str(min_amount)+str(max_amount), 'utf-8')).hexdigest()
+    filter_id = month+filter_hash
+
 
     if min_amount > 1 or max_amount < amount_range.max():
         enrollments = False #st.checkbox("Include enrollment surveys (without transfer)", value= False,disabled=True)
@@ -121,9 +124,9 @@ def main():
         if st.button("Create Wordcloud",key = "cloud"):
             with st.spinner("Creating Wordcloud..."):
                 filtered_df = filter_df(agg_df,gender,question,campaign,enrollments,min_amount,max_amount)    
-                text = text_from_filter(filtered_df)
+                text = " ".join(response for response in filtered_df.agg_response)
                 # st.image(image, width=100, use_column_width=True)
-                st.write(cloud(text, max_word, max_font, random), use_column_width=True)
+                plot_WordCloud(text, max_word, max_font, random)
         
         else:
             st.info("Hit 'Create Wordcloud' when you are ready")
@@ -132,25 +135,29 @@ def main():
     
     
     st.write("## Step III: Calculate Wordcount")
-    st.warning("This could take a moment, depending on your filter settings (up to two minutes on the unfiltered dataset). If you decide to stop a calculation, you likely have to refresh the page to do another analysis.")
-    try:
-        
-        if st.button("Calculate Wordcount",key = "count"):
-            with st.spinner("Calculating Wordcount..."):
-                filtered_df = filter_df(agg_df,gender,question,campaign,enrollments,min_amount,max_amount)    
-                text = text_from_filter(filtered_df)
+    try:        
+        if st.button("Calculate Wordcount",key = "count"):            
+            try:
+                with st.spinner("Trying to load cached data..."):
+                    noun_df,verb_df,adj_df=read_pickled_count(filter_id)
+            except:
+                with st.spinner("Calculating Wordcount... This could take a moment, depending on your filter settings (up to two minutes on the unfiltered dataset). If you decide to stop a calculation, you likely have to refresh the page to do another analysis."):
 
-                nouns, verbs, adjectives = st.columns(3)
-                noun_df,verb_df,adj_df = WordCounter(text)
-                with nouns:
-                    st.write("### Nouns")
-                    st.dataframe(noun_df)
-                with verbs:
-                    st.write("### Verbs")
-                    st.dataframe(verb_df)
-                with adjectives:
-                    st.write("### Adjectives")   
-                    st.dataframe(adj_df)
+                    filtered_df = filter_df(agg_df,gender,question,campaign,enrollments,min_amount,max_amount)    
+                    text = " ".join(response for response in filtered_df.agg_response)                    
+                    noun_df,verb_df,adj_df = WordCounter(text)
+
+            nouns, verbs, adjectives = st.columns(3)
+            with nouns:
+                st.write("### Nouns")
+                st.dataframe(noun_df)
+            with verbs:
+                st.write("### Verbs")
+                st.dataframe(verb_df)
+            with adjectives:
+                st.write("### Adjectives")   
+                st.dataframe(adj_df)
+            pickle_count(filter_id,noun_df,verb_df,adj_df)
         else:
             st.write("This will calculate the count of nouns, verbs and adjectives seperately and display them in tables, sorted by frequency.")
             st.info("Hit 'Calculate wordcount' when you are ready")            
@@ -174,4 +181,4 @@ def main():
 
             
 if __name__=="__main__":
-  main()
+    main()

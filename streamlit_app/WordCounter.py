@@ -5,7 +5,6 @@ import nltk
 nltk.download(['averaged_perceptron_tagger'])
 import pandas as pd
 import numpy as np
-from etl.gbq_functions import get_aggregate_data
 
 from dask import delayed, compute
 #Progress Bar for WordCount
@@ -13,19 +12,7 @@ from dask import delayed, compute
 #pbar = ProgressBar()
 #pbar.register()
 
-def pickle_full_sample_count():
-    df = get_aggregate_data()
-    text = " ".join(response for response in df.agg_response)
-    noun_df,verb_df,adj_df = WordCounter(text)
-    with open('full_sample_count.pkl', 'wb') as file:
-        pickle.dump([noun_df,verb_df,adj_df], file)
-    #...
-    #Commit to GitHub or Cloud Storage to be added
-
 def WordCounter(text): 
-
-
-    #print('PROPER NOUNS EXTRACTED :')
     noun_list = []
     verb_list = []
     adj_list = []
@@ -66,7 +53,22 @@ def WordCounter(text):
     adj_df.index = adj_df.index + 1
     print("Wordcount complete")
 
+    noun_df.name = "nouns"
+    verb_df.name = "verbs"
+    adj_df.name = "adjectives"
+
     return noun_df,verb_df,adj_df
 
-if __name__ == '__main__':
-    pickle_full_sample_count()
+def pickle_count(filter_id,noun_df,verb_df,adj_df):
+    data = [noun_df,verb_df,adj_df]
+    with open(filter_id, "wb") as f:
+        pickle.dump(len(data), f)
+        for value in data:
+            pickle.dump(value, f)
+
+def read_pickled_count(filter_id):
+    data = []
+    with open(filter_id, "rb") as f:
+        for _ in range(pickle.load(f)):
+            data.append(pickle.load(f))
+    return data #list of three dataframes [noun_df,verb_df,adj_df]

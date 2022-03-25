@@ -1,4 +1,5 @@
 from google.cloud import bigquery
+
 import logging
 import nltk
 
@@ -8,9 +9,8 @@ if os.getcwd() == "/app/gdlive-explorer":  #If on streamlit cloud, get client vi
     from streamlit_app.streamlit_cloud_client import get_stcloud_client
     client = get_stcloud_client()
 else: #get it from the GCP environment
+    #os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "gcp_key.json" #Needed on local machine
     client = bigquery.Client()
-    
-
 
 def load_recipient(payload):
 
