@@ -138,11 +138,10 @@ def main():
     try:        
         if st.button("Calculate Wordcount",key = "count"):            
             try:
-                with st.spinner("Try loading cached data..."):
+                with st.spinner("Trying to load cached data..."):
                     noun_df,verb_df,adj_df=read_pickled_count(filter_id)
             except:
-                with st.spinner("Calculating Wordcount..."):
-                    st.warning("This could take a moment, depending on your filter settings (up to two minutes on the unfiltered dataset). If you decide to stop a calculation, you likely have to refresh the page to do another analysis.")
+                with st.spinner("Calculating Wordcount... This could take a moment, depending on your filter settings (up to two minutes on the unfiltered dataset). If you decide to stop a calculation, you likely have to refresh the page to do another analysis."):
 
                     filtered_df = filter_df(agg_df,gender,question,campaign,enrollments,min_amount,max_amount)    
                     text = " ".join(response for response in filtered_df.agg_response)                    
