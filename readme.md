@@ -31,15 +31,19 @@ Further, some data point, such as the participants gender, is not given on the w
 ![Wordcount](https://user-images.githubusercontent.com/31634583/159189078-d56b8f31-89b8-49ab-ad40-6865ce85b2f5.png)
 
 ## Current status
+### Scraper
 The webscraper is complete and uploading to BQ as well as streamlit tested. Completed profiles are skipped. Profile are scraped in parallel using dask and data is loaded into BQ in batches which size can be set manually (currently 100). The scraper scrapes 100 sites in parallel using dask, and then loads them to BQ. 
 Incomplete profiles and already loaded questions in incomplete profiles are skipped.
 For now, I ma using Google Cloud Build for CI.
 
+### Dashboard
+Basic features, including WordCloud, wordcount, and filtering are implemented.
+Temporary caching in the Streamlit Cloud container image is implmented.
 
 ## Next steps
 Add sentiment analysis using Flink.
 Orchestrate everything, possibly using Prefect, Make, or a scheduling tool in GCP.
-
+Cache persistently, either directly in the repository or on Google Cloud Storage.
 
 ### Cloud Run Deployment on hold
 My project, like [many others](https://github.com/streamlit/streamlit/issues/3028), faces issues with Streamlit deployment on Google Cloud Run. Streamlit uses a URL for their health checks that is reserved on GCP, leading to a 404 error shortly after loading the app. 
