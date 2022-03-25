@@ -17,9 +17,10 @@ def pickle_full_sample_count():
     df = get_aggregate_data()
     text = " ".join(response for response in df.agg_response)
     noun_df,verb_df,adj_df = WordCounter(text)
-    with open('full_sample_count.pkl', 'wb') as file:
-        pickle.dump([noun_df,verb_df,adj_df], file)
-    #...
+    for df in [noun_df,verb_df,adj_df]:
+        with open(df.name+'_full_sample_count.pkl', 'wb') as file:
+            pickle.dump(df, file)
+        #...
     #Commit to GitHub or Cloud Storage to be added
 
 def WordCounter(text): 
@@ -65,6 +66,10 @@ def WordCounter(text):
     verb_df.index = verb_df.index + 1
     adj_df.index = adj_df.index + 1
     print("Wordcount complete")
+
+    noun_df.name = "nouns"
+    verb_df.name = "verbs"
+    adj_df.name = "adjectives"
 
     return noun_df,verb_df,adj_df
 
