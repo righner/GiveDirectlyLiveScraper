@@ -126,7 +126,7 @@ def main():
                 filtered_df = filter_df(agg_df,gender,question,campaign,enrollments,min_amount,max_amount)    
                 text = " ".join(response for response in filtered_df.agg_response)
                 # st.image(image, width=100, use_column_width=True)
-                st.write(cloud(text, max_word, max_font, random), use_column_width=True)
+                st.image(cloud(text, max_word, max_font, random), use_column_width=True)
         
         else:
             st.info("Hit 'Create Wordcloud' when you are ready")
@@ -145,7 +145,7 @@ def main():
                     st.warning("This could take a moment, depending on your filter settings (up to two minutes on the unfiltered dataset). If you decide to stop a calculation, you likely have to refresh the page to do another analysis.")
 
                     filtered_df = filter_df(agg_df,gender,question,campaign,enrollments,min_amount,max_amount)    
-                    text = text_from_filter(filtered_df)                    
+                    text = " ".join(response for response in filtered_df.agg_response)                    
                     noun_df,verb_df,adj_df = WordCounter(text)
 
             nouns, verbs, adjectives = st.columns(3)
