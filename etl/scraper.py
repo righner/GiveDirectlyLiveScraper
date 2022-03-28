@@ -42,6 +42,8 @@ def create_payloads(dask_product):
         Payload of surveys and their containing questions and responses in json format. 
     Metadata the batch, i.e. counts and errors.
     """
+
+    #Initialize variables
     recipients_payload = []
     responses_payload = []
     loaded = 0
@@ -53,7 +55,7 @@ def create_payloads(dask_product):
     empty_response = 0
     logging.info("Parsing payload...")
     #logging.info(dask_product)
-    for load in dask_product:
+    for load in dask_product: #Sort each profile according to contents
         #logging.info(load[1])
         try:
             if load == "Profile does not exist":
@@ -85,7 +87,9 @@ def create_payloads(dask_product):
     return recipients_payload, responses_payload, loaded, no_profile, parsing_error, no_updates,unknown_error,empty_response, no_questions
 
 
-def scrape_profile(rid,completed_surveys):
+
+
+def scrape_profile(rid,completed_surveys = []):
     """
     Takes an rid and returns both recipient details as well as survey responses. Extraction of both is executed in parallel using dask.
     Even though nested dask setups are not recommended, it turned out to be slighly faster doing it.
@@ -111,79 +115,21 @@ def scrape_profile(rid,completed_surveys):
         url = "https://live.givedirectly.org/newsfeed/a7de23c0-39af-4af3-9671-13dc38a85e26/"+str(rid)+"?context=newsfeed"
 
         profile, source = load_recipient_profile(url,rid)
-        if source:
+        if source: #When no profile exists, source will be None
             recipient = dask.delayed(get_recipient_details)(profile,rid)
 
             responses = dask.delayed(get_recipient_surveys)(profile,rid,source,completed_surveys)
  
-            return dask.compute(recipient,responses)
+            return dask.compute(recipient,responses) #Execute processing of recipient data and responses in parallel. Such nested delaying is NOT recommended in the dask documentation, but turned out to be faster in this case.
         else:
             return profile
 
     except Exception as e:
         if "Sorry, the recipient you're looking for can't be found" in str(profile):
-            return "Profile does not exist"
+            return "Profile does not exist" #Tag load to be categorized as "no profile"
         else:
             logging.error("Unknown error at rid "+str(rid)+"\n   "+str(e))
-            pass
-
-
-
-def get_recipient_surveys(profile,rid,source,completed_surveys):
-    """
-    Extracts survey data from a profile and returns  the responses as a json payload.
-    It first loads the initial enrollment survey (if given), then checks how many follow up surveys were conducted, and finally extracts and loads each of them into a list.
-
-    Parameters
-    ----------
-    profile : Beautiful Soup
-        A BeautifulSoup file containing data from a GD-Live profile.
-    rid : int
-        The recipient ID of the GD-Live profile url.
-    source : str
-        HTML of profile site.
-    completed_surveys: list
-        A list of surveys already in the databse that can be skipped    
-
-    Returns
-    -------
-    responses: list
-        List of surveys and their containing questions and responses in json format.
-
-    """
-    responses = []
-    skip_count = 0
-    enrollment_id = str(rid)+"_"+str(0)
-    if enrollment_id not in completed_surveys:
-        try:
-            responses= [*responses,*get_survey_jsons(rid,profile,"enrollment")] #the '*' operator gets all items from the list
-        except AttributeError:
-            logging.info("     No survey class 'enrollment' found in rid "+str(rid))
-            skip_count += 1
-    else:
-        logging.info("     Skipped survey "+enrollment_id)
-        skip_count += 1
-
-    payments = list(set(re.findall(r"payment_\d{1,2}",source )))
-    for payment in payments:
-        payment_id = str(rid)+"_"+re.findall(r"([1-9]+)",payment)[0]
-        if payment_id not in completed_surveys:
-                responses= [*responses,*get_survey_jsons(rid,profile,payment)] 
-                #logging.info("     Payment "+payment+" extracted")
-        else:
-            logging.info("     Skipped survey "+payment_id)
-            skip_count += 1
-        
-    if skip_count != (1 + len(payments)):
-        return responses
-    elif skip_count == (1 + len(payments)):
-        logging.info("No Updates for rid "+str(rid))
-        return ["No updates"]
-    elif responses == []:
-        logging.warning("Empty response array returned for rid "+str(rid))
-        return ["Empty"]
-
-
+            return "Error"
 
 def load_recipient_profile(recipient_url,rid):
     """
@@ -214,8 +160,62 @@ def load_recipient_profile(recipient_url,rid):
             return profile, source
     except Exception as e:
         logging.error("Failure resquesting from rid "+str(rid)+ "\n     "+str(e))
-        raise e        
+        pass
     
+
+def get_recipient_surveys(profile,rid,source,completed_surveys):
+    """
+    Extracts survey data from a profile and returns  the responses as a json payload.
+    It first loads the initial enrollment survey (if given), then checks how many follow up surveys were conducted, and finally extracts and loads each of them into a list.
+
+    Parameters
+    ----------
+    profile : Beautiful Soup
+        A BeautifulSoup file containing data from a GD-Live profile.
+    rid : int
+        The recipient ID of the GD-Live profile url.
+    source : str
+        HTML of profile site.
+    completed_surveys: list
+        A list of surveys already in the databse that can be skipped    
+
+    Returns
+    -------
+    responses: list
+        List of surveys and their containing questions and responses in json format.
+
+    """
+    responses = []
+    skip_count = 0
+    enrollment_id = str(rid)+"_"+str(0)
+    if enrollment_id not in completed_surveys: #Skip enrollment survey if already loaded
+        try:
+            responses= [*responses,*get_survey_jsons(rid,profile,"enrollment")] #Merge list returned by get_survey_josn into the responses list. The '*' operator unpacks all items from a list.
+        except AttributeError:
+            logging.info("     No survey class 'enrollment' found in rid "+str(rid))
+            skip_count += 1
+    else:
+        logging.info("     Skipped survey "+enrollment_id)
+        skip_count += 1
+
+    payments = list(set(re.findall(r"payment_\d{1,2}",source ))) #Find and list all items ("set" only returns unique elements) in source with the form "payment_X", where X can be a one or two digit number.
+    for payment in payments:
+        payment_id = str(rid)+"_"+re.findall(r"([1-9]+)",payment)[0] #create a payment ID in the for rid_X
+        if payment_id not in completed_surveys: #Skip already loaded payment surveys
+                responses= [*responses,*get_survey_jsons(rid,profile,payment)]  #Merge list returned by get_survey_josn into the responses list. The '*' operator unpacks all items from a list.
+                #logging.info("     Payment "+payment+" extracted")
+        else:
+            logging.info("     Skipped survey "+payment_id)
+            skip_count += 1
+        
+    if skip_count != (1 + len(payments)): #If not all surveys in profile were skipped, then return survey.
+        return responses
+    elif skip_count == (1 + len(payments)): #If all surveys were skipped, tag as "No Updates"
+        logging.info("No Updates for rid "+str(rid))
+        return ["No updates"] 
+    elif responses == []: #This should not happen...
+        logging.warning("Empty response array returned for rid "+str(rid))
+        return ["Empty"]
 
 
 def get_recipient_details(profile,rid):
@@ -235,6 +235,7 @@ def get_recipient_details(profile,rid):
         Returns the metadata of a GD-Live profile: recipient_id, name, age, country, occupation, status boolean (completet or not),campaign name, and current timestamp (update time)".
 
     """
+    # Extract recipient data from BeautifulSoup 
     name = profile.find("div", class_="card-name card-name-profile").text.strip()
     try:
         age = profile.find("div", class_="fact fact-age").find("div", class_="fact-content").text.strip()
@@ -252,9 +253,9 @@ def get_recipient_details(profile,rid):
         logging.info("     No occupation for profile "+str(rid))
         occupation = None
     campaign = profile.find("div", class_="fact fact-project").find("div", class_="fact-content").text.strip()
-    complete = (profile.find_all("div", class_="no-updates-message") != [])
+    complete = (profile.find_all("div", class_="no-updates-message") != []) #If no further updates for this profile, tag as completed
     
-    last_updated = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    last_updated = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ') #add timestamp
 
   
     #create payload json
@@ -301,30 +302,27 @@ def get_survey_jsons(rid,profile, survey):
         local_amount = None
     else:
         try:        
-            amount = re.findall(r"\$([1-9]+)",amount_str[0])[0]
+            amount = re.findall(r"\$([1-9]+)",amount_str[0])[0] #Find all values in format $X 
         except Exception:
             logging.error("Dollar amount missing for rid "+str(rid)+"\n"+str(amount_str))
             amount = None
         try:        
-            local_amount = re.findall(r"(?m)^(\d+).*",amount_str[0])[0]
+            local_amount = re.findall(r"(\d+).*",amount_str[0])[0] #Return only the number at the beginning of the string (?m)^(\d+).*
         except Exception:
             logging.error("Local amount missing for rid "+str(rid)+"\n"+str(amount_str))
             local_amount = None
 
-    if survey == "enrollment":
-        payment = 0
+    if survey == "enrollment": #Set payment code to 0 if enrollment
+        payment = 0 
     else:
-        payment = int(re.findall(r"([1-9]+)",survey)[0])
+        payment = int(re.findall(r"([1-9]+)",survey)[0]) #return number at the end of of payment_X as payment code.
 
     timestamp = get_profile_item(profile, survey,"phase-time")[0]
     try:
         year = parse_timestamp(timestamp)
     except UnboundLocalError as e:
         logging.info("     Unknown time format at rid "+str(rid))
-        raise e
-
-    
-
+        raise e #debugging needed
 
     responses_list = []
     for (response, question) in zip(responses,questions):
@@ -344,9 +342,9 @@ def get_survey_jsons(rid,profile, survey):
     try:
         #logging.info(responses_list)
         return responses_list
-    except IndexError:
+    except IndexError: #
         logging.info("     Likely no survey questions asked for "+survey+" in "+str(rid))
-        return "No questions asked"
+        return "No questions asked" #Tag as empty survey
 
 #@profile
 def get_profile_item(soup, container_name, html_class):

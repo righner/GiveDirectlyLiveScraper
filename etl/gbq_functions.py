@@ -1,18 +1,28 @@
+# A list of funtions for extracting and loading data to/from Google BigQuery
 from google.cloud import bigquery
 
 import logging
 import nltk
 
 import sys,os
-sys.path.append('./')
+sys.path.append('./') #put other folders on path
 if os.getcwd() == "/app/gdlive-explorer":  #If on streamlit cloud, get client via streamlit secrets  
     from streamlit_app.streamlit_cloud_client import get_stcloud_client
     client = get_stcloud_client()
-else: #get it from the GCP environment
+else: #if on local machine or GCP, get it from the local/GCP environment
     #os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "gcp_key.json" #Needed on local machine
     client = bigquery.Client()
 
 def load_recipient(payload):
+    """
+    Uploads a payload of recipient data to Google BigQuery.
+
+    Parameters
+    ----------
+    payload : json
+        A json payload containing recipient data. 
+
+    """
 
     schema = [
         bigquery.SchemaField("recipient_id", "INTEGER", mode="REQUIRED"),
@@ -39,6 +49,15 @@ def load_recipient(payload):
 
 
 def load_response(payload):
+    """
+    Uploads a payload of response data to Googel BigQuery.
+
+    Parameters
+    ----------
+    payload : json
+        A json payload containing response data. 
+
+    """
 
     schema = [
         bigquery.SchemaField("response_id", "STRING", mode="REQUIRED"),
@@ -62,6 +81,15 @@ def load_response(payload):
         logging.error("Error loading this response payload to BigQuery:""\n"+str(payload))
 
 def replace_gender_table(payload):
+    """
+    Uploads a payload containing the gender table to Google BigQuery, deletes the old table, and then renames the new data table to replace the old one.
+
+    Parameters
+    ----------
+    payload : json
+        A json payload containing the table the name and the data from the gender classification API. 
+
+    """
     job_config = bigquery.LoadJobConfig(
     # Specify a (partial) schema. All columns are always written to the
     # table. The schema is used to assist in data type definitions.
@@ -95,10 +123,16 @@ def replace_gender_table(payload):
     )
 
 
-
-
-# Our SQL Query
 def get_complete_rids():
+    """
+    Exracts the recipient_id column from the recipients table on Google BigQuery and returns it as a pandas dataframe.
+
+    Returns
+    -------
+    completed recipients_ids: Pandas DataFrame
+        Recipient IDs of completed profiles in a Pandas DataFrame format.
+
+    """
     query = """
     SELECT DISTINCT recipient_id 
     FROM `gdliveproject.tests.recipients`
@@ -111,6 +145,15 @@ def get_complete_rids():
     return job.result().to_dataframe()
 
 def get_complete_surveys():
+    """
+    Exracts the survey_id column from the responses table on Google BigQuery and returns it as a pandas dataframe.
+
+    Returns
+    -------
+    completed survey_ids: Pandas DataFrame
+        IDs of completed surveys in a Pandas DataFrame format.
+
+    """
     query = """
     SELECT DISTINCT CONCAT(responses.recipient_id,"_",responses.payment) AS survey_id
     FROM gdliveproject.tests.responses
@@ -122,6 +165,15 @@ def get_complete_surveys():
     return job.result().to_dataframe()
 
 def get_names():
+    """
+    Exracts the distinct values from the name column from the recipient table on Google BigQuery and returns it as a pandas dataframe.
+
+    Returns
+    -------
+    names: Pandas DataFrame
+        Distinct names in a Pandas DataFrame format.
+
+    """
     query = """
     SELECT DISTINCT name 
     FROM `gdliveproject.tests.recipients`
@@ -134,6 +186,11 @@ def get_names():
     return job.result().to_dataframe()
 
 def delete_old_participant_details():
+    """
+    Submits a query request to Google BigQuery that runs a window funtion selecting only the most recently updated row per recipient id.
+    The resulting view is then materialized, the old recipient table deleted, and the new table renamed to replace the old one.
+
+    """
     query = """
     CREATE TABLE IF NOT EXISTS gdliveproject.tests.updated AS (
         WITH added_row AS (
@@ -165,6 +222,10 @@ def delete_old_participant_details():
 
 
 def try_create_recipient_response_tables():
+    """
+    Creates the recipient and responses tables, if the do not exist.
+
+    """
     query = """
     -- recipients table
     CREATE TABLE IF NOT EXISTS gdliveproject.tests.recipients (
@@ -195,6 +256,12 @@ def try_create_recipient_response_tables():
     logging.info("Recipient & response tables created (if not existing)")
 
 def create_aggregate_table():
+    """
+    Submits a query to Googel BigQuery that joins data from recipient, responses and gender table, aggregating the survey responses by gender, campaign name, payment number, payment amount in USD and the question.
+    The resulting view is then loaded in a Pandas DataFrame, after which stopwords are removed using nltk.
+    The transformed aggregate table is then loaded to BigQuery, replacing the old table.  
+
+    """
     query = """SELECT gender.gender as gender, recipients.campaign,responses.payment,responses.usdollar,responses.question, STRING_AGG(responses.response) AS agg_response
     FROM gdliveproject.tests.recipients
     INNER JOIN gdliveproject.tests.gender
@@ -238,6 +305,15 @@ def create_aggregate_table():
 
 
 def get_aggregate_data():
+    """
+    Extracts the aggregate table from Google Big Query and return it as Pandas DataFrame
+
+    Returns
+    -------
+    Aggregate data: Pandas DataFrame
+        A Pandas DataFrame containing the aggregate data table from Google BigQuery
+
+    """
     query = """
     SELECT * 
     FROM `gdliveproject.tests.GDLive_aggregate`
