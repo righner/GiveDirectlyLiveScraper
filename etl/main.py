@@ -5,23 +5,17 @@ import sys
 #dask
 import dask
 
-#time
-from datetime import datetime
-
 #logging
 from dask.diagnostics import ProgressBar
 pbar = ProgressBar()                
 pbar.register() # global registration
 from tqdm import tqdm
 import logging
-
-#import os
-#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "gcp_key.json" #Needed on local machine
 #logging.basicConfig(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO) #For local logging
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 from timer import Timer
 
-#custom 
+#own modules 
 from gbq_functions import load_recipient,load_response,get_complete_rids,get_complete_surveys, delete_old_participant_details,try_create_recipient_response_tables,create_aggregate_table
 from scraper import scrape_profile, create_payloads
 import gender_table
@@ -43,30 +37,33 @@ def main(start_rid=158000,interval=10,number_batches=62,batch_size=100): #Standa
     """
 
             
-    try_create_recipient_response_tables()
-    #Start with 158000
-    rid = start_rid
+    try_create_recipient_response_tables() #create tables, if not existing
+
+    rid = start_rid #set the first profile to be scraped
     #Query a list of profiles that are already complete and thus do not need to be scraped.
-    completed_profiles = get_complete_rids()["recipient_id"].values
+    completed_profiles = get_complete_rids()["recipient_id"].values #Returns the IDs of completed profiles as a numpy array.
     logging.info("List of complete profiles loaded")
 
-    completed_surveys = get_complete_surveys()["survey_id"].values
+    completed_surveys = get_complete_surveys()["survey_id"].values #Returns the IDs of completed survey as a numpy array.
     logging.info("List of complete surveys loaded")
 
-    for i in tqdm(range(0,number_batches)):
+    for i in tqdm(range(0,number_batches)): #Loop batches
         start = rid
+
+        #Set timer for benchmarking/logging
         t = Timer()
         t.start()
+
         dag = []
         scraped = []
         skipped = 0
         logging.info("\n""Starting to scrape batch "+str(i+1)+"\n")
-        for _ in range(0,batch_size):
-            if rid not in completed_profiles:
+        for _ in range(0,batch_size): #Loop profiles within batch
+            if rid not in completed_profiles: #Skip profiles marked as completed
                 try:
-                    dag.append(dask.delayed(scrape_profile,nout=2)(rid,completed_surveys))
+                    dag.append(dask.delayed(scrape_profile,nout=2)(rid,completed_surveys)) #Add scraper to dask dask dag specifying two expected outputs.
                 except Exception as e:
-                    logging.warning("Error at rid "+str(rid))
+                    logging.warning("Error creating task at rid "+str(rid))
                     logging.info(e)
                 rid += interval
                 
@@ -75,12 +72,12 @@ def main(start_rid=158000,interval=10,number_batches=62,batch_size=100): #Standa
                 rid += interval
                 logging.info(str(rid)+" already completed") 
                 skipped += 1
-        finish = rid
-        #dask.visualize(*dag)
-        dask_product = dask.compute(*dag)
+        finish = rid #set last recipient id scraped
+        #dask.visualize(*dag) 
+        dask_product = dask.compute(*dag) #compute tasks
         logging.info("All dask tasks completed")
         #logging.info(dask_product)
-        recipients_payload, responses_payload, loaded, no_profile, parsing_error, no_updates,unknown_error,empty_response,no_questions  = create_payloads(dask_product)
+        recipients_payload, responses_payload, loaded, no_profile, parsing_error, no_updates,unknown_error,empty_response,no_questions  = create_payloads(dask_product) #output payloads and metadata
         if responses_payload != []:
             try:
                 logging.info("Finished scraping "+str(len(scraped))+" profiles between rid "+str(start)+" and "+str(finish)+" with interval "+str(interval)+". Skipped "+str(skipped)+" complete profiles \
@@ -110,7 +107,7 @@ def main(start_rid=158000,interval=10,number_batches=62,batch_size=100): #Standa
 
     #logging.info(scraped)
     
-    delete_old_participant_details()
+    delete_old_participant_details() 
     
     gender_table.main()
 

@@ -12,7 +12,25 @@ from dask import delayed, compute
 #pbar = ProgressBar()
 #pbar.register()
 
-def WordCounter(text): 
+def WordCounter(text):
+    """
+    Take a text string and counts the number of nouns, verbs and adjectives, returning the results as seperate Pandas DataFrames.
+    
+    Parameters
+    ----------
+    text: str
+        Text with responses. 
+
+    Returns
+    -------
+    noun_df: Pandas DataFrame
+        A sorted list of nouns with corresponding count.
+    verb_df: Pandas DataFrame
+        A sorted list of verbs with corresponding count.
+    adj_df: Pandas DataFrame
+        A sorted list of adjectives with corresponding count.
+
+    """ 
     noun_list = []
     verb_list = []
     adj_list = []
@@ -60,6 +78,21 @@ def WordCounter(text):
     return noun_df,verb_df,adj_df
 
 def pickle_count(filter_id,noun_df,verb_df,adj_df):
+    """
+    Pickles the word counts of a specific filter setting and writes them to a file for later use.
+    
+    Parameters
+    ----------
+    filter_id : str
+        An ID strong made of the month of the request and the a hash-value generated from the filter settings. 
+    noun_df: Pandas DataFrame
+        A sorted list of nouns with corresponding count.
+    verb_df: Pandas DataFrame
+        A sorted list of verbs with corresponding count.
+    adj_df: Pandas DataFrame
+        A sorted list of adjectives with corresponding count.
+    
+    """ 
     data = [noun_df,verb_df,adj_df]
     with open(filter_id, "wb") as f:
         pickle.dump(len(data), f)
@@ -67,6 +100,24 @@ def pickle_count(filter_id,noun_df,verb_df,adj_df):
             pickle.dump(value, f)
 
 def read_pickled_count(filter_id):
+    """
+    Loads the pickled word count of a specific filter setting based on a filter_id.
+    
+    Parameters
+    ----------
+    filter_id : str
+        An ID strong made of the month of the request and the a hash-value generated from the filter settings. 
+
+    Returns
+    -------
+    noun_df: Pandas DataFrame
+        A sorted list of nouns with corresponding count.
+    verb_df: Pandas DataFrame
+        A sorted list of verbs with corresponding count.
+    adj_df: Pandas DataFrame
+        A sorted list of adjectives with corresponding count.
+
+    """ 
     data = []
     with open(filter_id, "rb") as f:
         for _ in range(pickle.load(f)):

@@ -38,9 +38,10 @@ For now, I ma using Google Cloud Build for CI.
 
 ### Dashboard
 Basic features, including WordCloud, wordcount, and filtering are implemented.
-Temporary caching in the Streamlit Cloud container image is implmented.
+Improved caching of word count in the Streamlit Cloud container image instead of browser is implemented.
 
 ## Next steps
+Improve caching of Streamlit dashboard, i.e load agg_data from container image instead of BigQuery.
 Add sentiment analysis using Flink.
 Orchestrate everything, possibly using Prefect, Make, or a scheduling tool in GCP.
 Cache persistently, either directly in the repository or on Google Cloud Storage.
