@@ -1,8 +1,6 @@
 
 import streamlit as st
 
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 import hashlib
 from datetime import datetime
 
@@ -13,7 +11,9 @@ pbar.register()
 #Importing other modules
 import sys
 sys.path.append('./') #Putting other modules on path
-from WordCounter import WordCounter, pickle_count, read_pickled_count
+from streamlit_app.WordCounter import WordCounter
+from streamlit_app.pickler import pickle_data, read_pickled_data
+from streamlit_app.Wordcloud import create_Wordcloud,plot_Wordcloud
 from etl.gbq_functions import get_aggregate_data
 
 import os
@@ -29,9 +29,15 @@ else: #get it from the GCP environment
 @st.cache(ttl = 86400, show_spinner = False) #Cache df for 24h
 def cache_aggregate_data():
     """
-    Calls the get_aggregate_data to extract the aggregate data table, and loads it into the users cache. 
+    Calls the read_pickled_data or get_aggregate_data to extract the aggregate data table, and loads it into the users cache. 
     """
-    return get_aggregate_data()
+    agg_data_id = datetime.now().strftime('%Y%m_') + "agg_df"
+    try: #If pickled df exists, get it
+        return read_pickled_data(agg_data_id)[0]
+    except: #otherwise load from BigQuery 
+        agg_data = get_aggregate_data()
+        pickle_data(agg_data_id,agg_data)
+    return agg_data
 
 
 def filter_df(df, gender, question,campaign,no_enrollments,min_amount,max_amount):
@@ -69,33 +75,6 @@ def filter_df(df, gender, question,campaign,no_enrollments,min_amount,max_amount
         df = df[df['campaign'].isin(campaign)]
     return df
 
-
-def plot_WordCloud(text, max_word, max_font, random):
-    """
-    Take a string of text and plots it as a WordCloud. The WordCloud can be customomized according to three parameters. 
-
-    Parameters:
-    text: str
-        A pandas DataFrame containing the aggregate data table.    
-    max_words: int
-        Integer setting the max number of words to be diplayed in the WordCloud
-    max_font: int
-        Integer setting the maximum font size to be used in the WordCloud
-    random: int
-        Integer setting the a seed foor how to arrange the words.
-
-    """
-    
-    wc = WordCloud(mode = "RGBA",background_color=None, max_words=max_word,
-    max_font_size=max_font, random_state=random,width=1600, height=900)
-
-    # generate word cloud
-    wc.generate(text)
-    fig, ax = plt.subplots() #creates a figure and a grid of subplots with a single call
-    ax.imshow(wc) #render wc as image
-    plt.axis('off')
-    st.pyplot(fig) #plot figure on streamlit
-    
 
 def sizable_text(px,text):
     """
@@ -169,10 +148,17 @@ def main():
 
     try:
         if st.button("Create Wordcloud",key = "cloud"):
-            with st.spinner("Creating Wordcloud..."):
-                filtered_df = filter_df(agg_df,gender,question,campaign,no_enrollments,min_amount,max_amount)    
-                text = " ".join(response for response in filtered_df.agg_response)
-                plot_WordCloud(text, max_word, max_font, random)
+            cloud_id= "cloud_" + filter_id + str(max_word) + str(max_font)+ str(random)
+            try:
+                cloud = read_pickled_data(cloud_id)[0]
+                plot_Wordcloud(cloud)
+            except:
+                with st.spinner("Creating Wordcloud..."):
+                    filtered_df = filter_df(agg_df,gender,question,campaign,no_enrollments,min_amount,max_amount)    
+                    text = " ".join(response for response in filtered_df.agg_response)
+                    cloud = create_Wordcloud(text, max_word, max_font, random)
+                    plot_Wordcloud(cloud)
+                    pickle_data(cloud_id,cloud)
         
         else:
             st.info("Hit 'Create Wordcloud' when you are ready")
@@ -182,10 +168,11 @@ def main():
     
     st.write("## Step III: Calculate Wordcount")
     try:        
-        if st.button("Calculate Wordcount",key = "count"):            
+        if st.button("Calculate Wordcount",key = "count"):
+            count_id = "count_"+filter_id
             try:
                 with st.spinner("Trying to load cached data..."):
-                    noun_df,verb_df,adj_df=read_pickled_count(filter_id)
+                    noun_df,verb_df,adj_df=read_pickled_data(count_id)
             except:
                 with st.spinner("Calculating Wordcount... This could take a moment, depending on your filter settings (up to two minutes on the unfiltered dataset)."):
 
@@ -203,7 +190,7 @@ def main():
             with adjectives:
                 st.write("### Adjectives")   
                 st.dataframe(adj_df)
-            pickle_count(filter_id,noun_df,verb_df,adj_df)
+            pickle_data(count_id,noun_df,verb_df,adj_df)
         else:
             st.write("This will calculate the count of nouns, verbs and adjectives seperately and display them in tables, sorted by frequency.")
             st.info("Hit 'Calculate wordcount' when you are ready")            

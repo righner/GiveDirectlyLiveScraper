@@ -1,6 +1,5 @@
 # wget https://raw.githubusercontent.com/rainermensing/GDLive-Explorer/main/streamlit.py
 
-import pickle
 import nltk
 nltk.download(['averaged_perceptron_tagger'])
 import pandas as pd
@@ -77,49 +76,3 @@ def WordCounter(text):
 
     return noun_df,verb_df,adj_df
 
-def pickle_count(filter_id,noun_df,verb_df,adj_df):
-    """
-    Pickles the word counts of a specific filter setting and writes them to a file for later use.
-    
-    Parameters
-    ----------
-    filter_id : str
-        An ID strong made of the month of the request and the a hash-value generated from the filter settings. 
-    noun_df: Pandas DataFrame
-        A sorted list of nouns with corresponding count.
-    verb_df: Pandas DataFrame
-        A sorted list of verbs with corresponding count.
-    adj_df: Pandas DataFrame
-        A sorted list of adjectives with corresponding count.
-    
-    """ 
-    data = [noun_df,verb_df,adj_df]
-    with open(filter_id, "wb") as f:
-        pickle.dump(len(data), f)
-        for value in data:
-            pickle.dump(value, f)
-
-def read_pickled_count(filter_id):
-    """
-    Loads the pickled word count of a specific filter setting based on a filter_id.
-    
-    Parameters
-    ----------
-    filter_id : str
-        An ID strong made of the month of the request and the a hash-value generated from the filter settings. 
-
-    Returns
-    -------
-    noun_df: Pandas DataFrame
-        A sorted list of nouns with corresponding count.
-    verb_df: Pandas DataFrame
-        A sorted list of verbs with corresponding count.
-    adj_df: Pandas DataFrame
-        A sorted list of adjectives with corresponding count.
-
-    """ 
-    data = []
-    with open(filter_id, "rb") as f:
-        for _ in range(pickle.load(f)):
-            data.append(pickle.load(f))
-    return data #list of three dataframes [noun_df,verb_df,adj_df]
