@@ -13,7 +13,7 @@ pbar.register()
 #Importing other modules
 import sys
 sys.path.append('./') #Putting other modules on path
-from WordCounter import WordCounter, pickle_data, read_pickled_data
+from streamlit_app.WordCounter import WordCounter, pickle_data, read_pickled_data
 from etl.gbq_functions import get_aggregate_data
 
 import os
