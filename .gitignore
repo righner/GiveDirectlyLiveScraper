@@ -2,4 +2,4 @@ __pycache__
 gcp_key.json
 logs
 local_client.py
-*.pkl
+*.pickle

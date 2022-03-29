@@ -77,31 +77,27 @@ def WordCounter(text):
 
     return noun_df,verb_df,adj_df
 
-def pickle_count(filter_id,noun_df,verb_df,adj_df):
+def pickle_data(pickle_id,*args):
     """
-    Pickles the word counts of a specific filter setting and writes them to a file for later use.
+    Pickles one or more items fromfrom memory to a file for later use.
     
     Parameters
     ----------
     filter_id : str
-        An ID strong made of the month of the request and the a hash-value generated from the filter settings. 
-    noun_df: Pandas DataFrame
-        A sorted list of nouns with corresponding count.
-    verb_df: Pandas DataFrame
-        A sorted list of verbs with corresponding count.
-    adj_df: Pandas DataFrame
-        A sorted list of adjectives with corresponding count.
+        An ID string 
+    args: list
+        list of one or more data variables
     
     """ 
-    data = [noun_df,verb_df,adj_df]
-    with open(filter_id, "wb") as f:
-        pickle.dump(len(data), f)
-        for value in data:
+    
+    with open(pickle_id+".pickle", "wb") as f:
+        pickle.dump(len(args), f)
+        for value in args:
             pickle.dump(value, f)
 
-def read_pickled_count(filter_id):
+def read_pickled_data(pickle_id):
     """
-    Loads the pickled word count of a specific filter setting based on a filter_id.
+    Loads pickled data based on ID string. 
     
     Parameters
     ----------
@@ -110,16 +106,12 @@ def read_pickled_count(filter_id):
 
     Returns
     -------
-    noun_df: Pandas DataFrame
-        A sorted list of nouns with corresponding count.
-    verb_df: Pandas DataFrame
-        A sorted list of verbs with corresponding count.
-    adj_df: Pandas DataFrame
-        A sorted list of adjectives with corresponding count.
+    data: list
+        A list containing one or more files
 
     """ 
     data = []
-    with open(filter_id, "rb") as f:
+    with open(pickle_id+".pickle", "rb") as f:
         for _ in range(pickle.load(f)):
             data.append(pickle.load(f))
-    return data #list of three dataframes [noun_df,verb_df,adj_df]
+    return data #list of dataframes
