@@ -1,8 +1,6 @@
 
 import streamlit as st
 
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 import hashlib
 from datetime import datetime
 
@@ -13,7 +11,9 @@ pbar.register()
 #Importing other modules
 import sys
 sys.path.append('./') #Putting other modules on path
-from streamlit_app.WordCounter import WordCounter, pickle_data, read_pickled_data
+from streamlit_app.WordCounter import WordCounter
+from streamlit_app.pickler import pickle_data, read_pickled_data
+from streamlit_app.Wordcloud import create_Wordcloud,plot_Wordcloud
 from etl.gbq_functions import get_aggregate_data
 
 import os
@@ -75,33 +75,6 @@ def filter_df(df, gender, question,campaign,no_enrollments,min_amount,max_amount
         df = df[df['campaign'].isin(campaign)]
     return df
 
-
-def plot_WordCloud(text, max_word, max_font, random):
-    """
-    Take a string of text and plots it as a WordCloud. The WordCloud can be customomized according to three parameters. 
-
-    Parameters:
-    text: str
-        A pandas DataFrame containing the aggregate data table.    
-    max_words: int
-        Integer setting the max number of words to be diplayed in the WordCloud
-    max_font: int
-        Integer setting the maximum font size to be used in the WordCloud
-    random: int
-        Integer setting the a seed foor how to arrange the words.
-
-    """
-    
-    cloud = WordCloud(mode = "RGBA",background_color=None, max_words=max_word,
-    max_font_size=max_font, random_state=random,width=1600, height=900)
-
-    # generate word cloud
-    cloud.generate(text)
-    fig, ax = plt.subplots() #creates a figure and a grid of subplots with a single call
-    ax.imshow(cloud) #render wc as image
-    plt.axis('off')    
-    return fig #plot figure on streamlit
-    
 
 def sizable_text(px,text):
     """
@@ -177,14 +150,14 @@ def main():
         if st.button("Create Wordcloud",key = "cloud"):
             cloud_id= "cloud_" + filter_id + str(max_word) + str(max_font)+ str(random)
             try:
-                cloud = read_pickled_data(cloud_id)
-                st.pyplot(cloud)
+                cloud = read_pickled_data(cloud_id)[0]
+                plot_Wordcloud(cloud)
             except:
                 with st.spinner("Creating Wordcloud..."):
                     filtered_df = filter_df(agg_df,gender,question,campaign,no_enrollments,min_amount,max_amount)    
                     text = " ".join(response for response in filtered_df.agg_response)
-                    cloud = plot_WordCloud(text, max_word, max_font, random)
-                    st.pyplot(cloud)
+                    cloud = create_Wordcloud(text, max_word, max_font, random)
+                    plot_Wordcloud(cloud)
                     pickle_data(cloud_id,cloud)
         
         else:
