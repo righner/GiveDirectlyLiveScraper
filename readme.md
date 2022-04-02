@@ -38,13 +38,14 @@ For now, I ma using Google Cloud Build for CI.
 
 ### Dashboard
 Basic features, including WordCloud, wordcount, and filtering are implemented.
-Improved caching of word count in the Streamlit Cloud container image instead of browser is implemented.
+Improved caching in the Streamlit Cloud container image instead of browser is implemented.
 
 ## Next steps
-Improve caching of Streamlit dashboard, i.e load agg_data from container image instead of BigQuery.
-Add sentiment analysis using Flink.
 Orchestrate everything, possibly using Prefect, Make, or a scheduling tool in GCP.
+Add unit tests
+Add sentiment analysis using Flink.
 Cache persistently, either directly in the repository or on Google Cloud Storage.
+Refa
 
 ### Cloud Run Deployment on hold
 My project, like [many others](https://github.com/streamlit/streamlit/issues/3028), faces issues with Streamlit deployment on Google Cloud Run. Streamlit uses a URL for their health checks that is reserved on GCP, leading to a 404 error shortly after loading the app. 

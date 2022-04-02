@@ -31,22 +31,24 @@ def create_gender_table(payloads):
         A Pandas DataFrame containing the new gender table.
 
     """
-    N_PARTITIONS = ceil(len(payloads)/100) #Max size per batch is 100 (at least in March 2022)
-    split_payloads = np.array_split(payloads, N_PARTITIONS)
     
     client = secretmanager_v1.SecretManagerServiceClient()
     request = secretmanager_v1.AccessSecretVersionRequest(
         name="projects/717891028584/secrets/gender_api_key/versions/2",
     )
     gender_api_key = client.access_secret_version(request=request).payload.data.decode("utf-8")
-    
+
+    N_PARTITIONS = ceil(len(payloads)/100) #Max size per batch is 100 (at least in March 2022)
+
+    split_payloads = np.array_split(payloads, N_PARTITIONS)
+
     gender_table = pd.DataFrame()
     for payload in split_payloads:
         payload = {"personalNames": list(payload) }
         gender_batch_df = get_gender_from_api(payload,gender_api_key)
         gender_table = pd.concat([gender_table,gender_batch_df], ignore_index=True)
 
-    
+
     gender_table = gender_table.rename(columns={"firstName":"name","likelyGender":"gender"})
 
     return gender_table[["name","gender","genderScale","score","probabilityCalibrated"]]
