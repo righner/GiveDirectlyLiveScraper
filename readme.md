@@ -34,18 +34,23 @@ Further, some data point, such as the participants gender, is not given on the w
 ### Scraper
 The webscraper is complete and uploading to BQ as well as streamlit tested. Completed profiles are skipped. Profile are scraped in parallel using dask and data is loaded into BQ in batches which size can be set manually (currently 100). The scraper scrapes 100 sites in parallel using dask, and then loads them to BQ. 
 Incomplete profiles and already loaded questions in incomplete profiles are skipped.
-For now, I ma using Google Cloud Build for CI.
+For now, I am using Google Cloud Build for CI.
+The database is updated once a month, scheduled via Airflow.
 
-### Dashboard
+
+### Streamlit
 Basic features, including WordCloud, wordcount, and filtering are implemented.
 Improved caching in the Streamlit Cloud container image instead of browser is implemented.
 
-## Next steps
-Orchestrate everything, possibly using Prefect, Make, or a scheduling tool in GCP.
-Add unit tests
+## Possible next steps/Ideas
+### Streamlit
+Add session_states and on_update funtions to prevent conflicting filter settings.  
 Add sentiment analysis using Flink.
-Cache persistently, either directly in the repository or on Google Cloud Storage.
-Refa
+Cache persistently, i.e. on Google Cloud Storage.
+### Scraper
+Refactor in OOP
+Add unit tests
+
 
 ### Cloud Run Deployment on hold
 My project, like [many others](https://github.com/streamlit/streamlit/issues/3028), faces issues with Streamlit deployment on Google Cloud Run. Streamlit uses a URL for their health checks that is reserved on GCP, leading to a 404 error shortly after loading the app. 
@@ -56,4 +61,4 @@ While there are some [hacky workarounds](https://discuss.streamlit.io/t/has-anyo
 
 ## Current questions
 - What is the best way to parallelise my scraper? Now Dask.
-- Which tool should I use for orchestration/scheduling?
+- How could the scraper be refactored using OOP, and what would be the benefits?

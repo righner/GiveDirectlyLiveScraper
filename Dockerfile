@@ -14,4 +14,4 @@ COPY ./streamlit_app ./streamlit_app
 
 ENTRYPOINT [ "python" ]
 
-CMD [ "./etl/scraper.py" ]
+CMD [ "./etl/main.py" ]

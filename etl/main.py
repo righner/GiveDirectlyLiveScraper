@@ -38,7 +38,7 @@ def main(start_rid=158000,interval=10,number_batches=62,batch_size=100,refresh_g
     gbq_functions.delete_old_participant_details() 
     
     #4 refresh the gender table
-    if refresh_gender:
+    if refresh_gender: #Skip in case there aren't enough credits left on Namsor
         gender_table.main()
 
     #5 create the aggregate table
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     elif len(argv) == 1:
         total = Timer()
         total.start()
-        logging.info("Running with default values: start_rid=158000,interval=10,number_batches=62,batch_size=100")
+        logging.info("Running with default values: start_rid=158000,interval=10,number_batches=62,batch_size=100,refresh_gender=True")
         main()
         logging.info(total.stop())
     else:
