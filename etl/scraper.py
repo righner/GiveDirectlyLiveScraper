@@ -2,31 +2,34 @@ import requests
 from bs4 import BeautifulSoup
 import regex as re
 import hashlib
+import tarfile
+import os
 
 #dask
 import dask
 
-
-#logging
-#from dask.diagnostics import ProgressBar
-#pbar = ProgressBar()                
-#pbar.register() # global registration
-from timer import Timer
-from tqdm import tqdm
-import logging
-
-#Settings for logging scraper on local machine:
-#logging.basicConfig(filename=str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO)
-#logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 #time parsing
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from gbq_functions import load_recipient,load_response,get_complete_rids,get_complete_surveys
 
+#logging
+from dask.diagnostics import ProgressBar
+pbar = ProgressBar()                
+pbar.register() # global registration
+
+from timer import Timer
+from tqdm import tqdm
+import logging
+import sys
+
+#Settings for logging scraper on local machine:
+logging.basicConfig(filename='logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 ### Functions ###
-def main(start_rid=158000,interval=10,number_batches=62,batch_size=100,no_dryrun=True): #Standard samples about 10% of the platform, i.e. every 10th profile until ID 220000
+def main(start_rid=158000,interval=10,number_batches=62,batch_size=100,no_dryrun=True, from_files=True): #Standard samples about 10% of the platform, i.e. every 10th profile until ID 220000
     """
     Loads profiles from the GDLive Website into a Database (i.e. BigQuery).
 
@@ -65,7 +68,11 @@ def main(start_rid=158000,interval=10,number_batches=62,batch_size=100,no_dryrun
         for _ in range(0,batch_size): #Loop profiles within batch
             if rid not in completed_profiles: #Skip profiles marked as completed
                 try:
-                    dag.append(dask.delayed(scrape_profile,nout=2)(rid,completed_surveys)) #Add scraper to dask dask dag specifying two expected outputs.
+                    if from_files:
+                        dag.append(dask.delayed(scrape_profile_from_file,nout=2)(rid,completed_surveys)) #Add scraper to dask dask dag specifying two expected outputs.
+                    else:
+                        dag.append(dask.delayed(scrape_profile,nout=2)(rid,completed_surveys))
+
                 except Exception as e:
                     logging.warning("Error creating task at rid "+str(rid))
                     logging.info(e)
@@ -81,7 +88,7 @@ def main(start_rid=158000,interval=10,number_batches=62,batch_size=100,no_dryrun
         dask_product = dask.compute(*dag) #compute tasks
         logging.info("All dask tasks completed")
         #logging.info(dask_product)
-        recipients_payload, responses_payload, loaded, no_profile, parsing_error, no_updates,unknown_error,empty_response,no_questions  = create_payloads(dask_product) #output payloads and metadata
+        recipients_payload, responses_payload, loaded, no_profile, no_file, parsing_error, no_updates,unknown_error,empty_response, no_questions  = create_payloads(dask_product) #output payloads and metadata
         if responses_payload != []:
             try:
                 logging.info("Finished scraping "+str(len(scraped))+" profiles between rid "+str(start)+" and "+str(finish)+" with interval "+str(interval)+". Skipped "+str(skipped)+" complete profiles \
@@ -136,6 +143,7 @@ def create_payloads(dask_product):
     responses_payload = []
     loaded = 0
     no_profile = 0
+    no_file = 0
     parsing_error = 0
     unknown_error = 0
     no_updates = 0
@@ -146,6 +154,8 @@ def create_payloads(dask_product):
     for load in dask_product: #Sort each profile according to contents
         #logging.info(load[1])
         try:
+            if load == "FileNotFoundError":
+                no_file += 1
             if load == "Profile does not exist":
                 no_profile += 1
             elif load == "Error":
@@ -172,10 +182,42 @@ def create_payloads(dask_product):
             unknown_error += 1
             logging.error("     Unknown error in this load:"+str(load)+"\n     "+str(outer))
             
-    return recipients_payload, responses_payload, loaded, no_profile, parsing_error, no_updates,unknown_error,empty_response, no_questions
+    return recipients_payload, responses_payload, loaded, no_profile, no_file, parsing_error, no_updates,unknown_error,empty_response, no_questions
 
+def scrape_profile_from_file(rid,completed_surveys = []):
+    directory = "html"
+    path = os.path.join(directory, str(rid))
+    try:
+        with open(path) as f:
+            source = f.read()
+            profile = BeautifulSoup(source, "lxml")
+                    
+            try:        
 
+                profile, source = request_recipient_profile(rid)
+                if source: #When no profile exists, source will be None
+                    recipient = dask.delayed(get_recipient_details)(profile,rid)
 
+                    responses = dask.delayed(get_recipient_surveys)(profile,rid,source,completed_surveys)
+        
+                    return dask.compute(recipient,responses) #Execute processing of recipient data and responses in parallel. Such nested delaying is NOT recommended in the dask documentation, but turned out to be faster in this case.
+                else:
+                    return profile
+
+            except Exception as e:
+                if "Sorry, the recipient you're looking for can't be found" in str(profile):
+                    return "Profile does not exist" #Tag load to be categorized as "no profile"
+                else:
+                    logging.error("Unknown error at rid "+str(rid)+"\n   "+str(e))
+                    return "Error"
+    except FileNotFoundError:
+        return "FileNotFoundError"
+
+def unpack_remote_htmls():
+    fname = datetime.now().strftime('%Y%m')+".tar.gz"
+    with tarfile.open(fname, "r:gz") as tar:
+        tar.extractall()
+        
 
 def scrape_profile(rid,completed_surveys = []):
     """
@@ -197,12 +239,9 @@ def scrape_profile(rid,completed_surveys = []):
 
     """
     
-    try:
-        
-        
-        url = "https://live.givedirectly.org/newsfeed/a7de23c0-39af-4af3-9671-13dc38a85e26/"+str(rid)+"?context=newsfeed"
+    try:        
 
-        profile, source = load_recipient_profile(url,rid)
+        profile, source = request_recipient_profile(rid)
         if source: #When no profile exists, source will be None
             recipient = dask.delayed(get_recipient_details)(profile,rid)
 
@@ -219,7 +258,7 @@ def scrape_profile(rid,completed_surveys = []):
             logging.error("Unknown error at rid "+str(rid)+"\n   "+str(e))
             return "Error"
 
-def load_recipient_profile(recipient_url,rid):
+def request_recipient_profile(rid):
     """
     Requests the data from profile page and return it both as BeautifulSoup and as string. 
     
@@ -239,6 +278,7 @@ def load_recipient_profile(recipient_url,rid):
 
     """
     try:
+        recipient_url = "https://live.givedirectly.org/newsfeed/a7de23c0-39af-4af3-9671-13dc38a85e26/"+str(rid)+"?context=newsfeed"
         source = requests.get(recipient_url).text
         profile = BeautifulSoup(source, "lxml")
         if "Sorry, the recipient you're looking for can't be found" in str(profile):
@@ -496,11 +536,11 @@ def parse_timestamp(timestamp):
 if __name__ == "__main__":
     from sys import argv
         
-    if len(argv) == 6:
+    if len(argv) == 7:
         print(eval(argv[5]))
         total = Timer()
         total.start()
-        main(start_rid=int(argv[1]),interval=int(argv[2]),number_batches=int(argv[3]),batch_size=int(argv[4]),no_dryrun=eval(argv[5]))
+        main(start_rid=int(argv[1]),interval=int(argv[2]),number_batches=int(argv[3]),batch_size=int(argv[4]),no_dryrun=eval(argv[5]),from_files=eval(argv[6]))
         logging.info(total.stop())
     elif len(argv) == 1:
         total = Timer()
@@ -509,5 +549,5 @@ if __name__ == "__main__":
         main()
         logging.info(total.stop())
     else:
-        logging.error("Incorrect number of arguments passed. Should be 4: start_rid,interval ,number_batches ,batch_size")
+        logging.error("Incorrect number of arguments passed. Should be 6: start_rid,interval ,number_batches ,batch_size, no_dryrun,from_files")
 
