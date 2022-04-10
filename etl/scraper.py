@@ -14,19 +14,21 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from gbq_functions import load_recipient,load_response,get_complete_rids,get_complete_surveys
 
-#logging
-from dask.diagnostics import ProgressBar
-pbar = ProgressBar()                
-pbar.register() # global registration
+
 
 from timer import Timer
 from tqdm import tqdm
 import logging
 import sys
 
+#logging (comment out before deployment)
+#from dask.diagnostics import ProgressBar
+#pbar = ProgressBar()                
+#pbar.register() # global registration
+
 #Settings for logging scraper on local machine:
-logging.basicConfig(filename='logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+#logging.basicConfig(filename='logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', level=logging.INFO)
+#logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 ### Functions ###
 def main(start_rid=158000,interval=10,number_batches=62,batch_size=100,no_dryrun=True, from_files=True): #Standard samples about 10% of the platform, i.e. every 10th profile until ID 220000
