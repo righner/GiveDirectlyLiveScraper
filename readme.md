@@ -1,4 +1,21 @@
 # Scraping and analysing cash transfer recipient survey data 
+## Contents
+1. Context
+2. The Problem
+3. The Idea
+4. Pipeline
+5. Database ERM
+6. The Scraper
+	1. Process
+	2. Parallelizing using Dask
+	3. Scheduling
+7. Streamlit Dashboard
+8. Speeding up NLTK by almost 30x
+9. Caching globally on Streamlit Cloud using pickles
+10. Current status
+11. Possible next steps/ ideas
+12. Current Questions	
+
 ## Context
 Since about 10 years, an NGO called GiveDirectly is providing unconditional cash transfers to extremely poor individuals, mostly in Easter Africa (Kenya/Uganda). Part of their philosophy is to present themselves as an experiment to proof that unconditional cash transfers are vastly more efficient than most other forms of aid in most contexts (i.e. whenever it is possible and a market exists locally where people can spend the money).
 To create transparency about their efficiency, their project is constantly been studied by economists using randomized controlled trials (RCTs). But in addition, they also provide raw survey data from recipients on their [website](live.givedirectly.org), where respondents answer question like "How did you spend the money?" and "How did it change your life?".
@@ -15,18 +32,21 @@ The survey data can only be viewed profile by profile. It would however also be 
 5. Load the aggregate table into Streamlit Cloud and make it available as a dashboard with wordcloud, wordcount, and possibly sentiment data.
 
 ## Pipeline
-![Pipeline](https://user-images.githubusercontent.com/31634583/161543367-baf3b216-e8c9-42dc-a740-c26f9c2c9616.png) 
+![Pipeline](https://user-images.githubusercontent.com/31634583/162624253-028a8083-5a19-4693-aa28-a1482a2983d0.png) 
 
 ## Database ERM
 ![ERM](https://user-images.githubusercontent.com/31634583/159188828-51b7dd5f-f7f7-4cd9-a6cd-e657d08a68c5.png)
 
 ## The Scraper
 ### Process
-In batches of 100 profiles:
-  1. Get the html source from the profile using the 6-digit recipient-ID found at the end of the profile URL (or skip it if complete and already in database.)
-  3. Scrape the recipients' info, i.e. Name, Age, Campaign, Complete?, etc.
-  4. List and scrape the surveys of the profile (and skip those already in the database).
-  5. Parse the data into two JSON payloads.
+1. Using make:
+	1. Get the html source from the webpage using the 6-digit recipient-ID found at the end of the profile URL (or skip it if complete and already in database.)
+	2. Store the tar.gz containing the htmls in Google Cloud Storage
+2. Using BeautifulSoup
+	1. Scrape the recipients' info, i.e. Name, Age, Campaign, Complete?, etc.
+	2. List and scrape the surveys of the profile (and skip those already in the database).
+3. Parse the data into two JSON payloads.
+4. Load it into BigQquery
 
 ### Parallelization using Dask
 To speed up the scraping process, I m using dask to run the processing of each profile in parallel. The scraper currently takes a list of 100 profiles as a batch. If a profile is not already completed and in the database, a task is added to a dag to scrape the profile.
@@ -230,8 +250,9 @@ count_id = "count_"+filter_id
 
 ## Current status
 ### Scraper
-The web scraper is complete and uploading to BQ as well as streamlit tested. Completed profiles are skipped. Profiles are scraped in parallel using dask and data is loaded into BQ in batches which size can be set manually (currently 100). The scraper scrapes 100 sites in parallel using dask, and then loads them to BQ. 
-Incomplete profiles and already loaded questions in incomplete profiles are skipped.
+The scraper now, unlike before, first downloads all the profiles to be scraped and stores them in a compressed file on Google Cloud Storage. 10 profiles are downloaded in parallel. Completed profiles already stored in BigQuery are skipped
+Then, the files are scraped using BeautifulSoup. Profiles are scraped in parallel using dask and data is loaded into BQ in batches which size can be set manually (currently 100). Batching is done to make the scraper more resilient to errors and to make help with debugging  
+Incomplete profiles and already loaded surveys in incomplete profiles are skipped.
 For now, I am using Google Cloud Build for CI.
 The database is updated once a month, scheduled via Airflow.
 
@@ -240,14 +261,13 @@ The database is updated once a month, scheduled via Airflow.
 Basic features, including WordCloud, wordcount, and filtering are implemented.
 Improved caching in the Streamlit Cloud container image instead of browser is implemented.
 
-## Possible next steps/Ideas
+## Possible next steps/ ideas
 ### Streamlit
 Add session_states and on_update funtions to prevent conflicting filter settings.  
 Add sentiment analysis using Flink.
 Cache persistently, i.e. on Google Cloud Storage.
 
 ### Scraper
-Store the html of each profile as file first, then do the analysis. This will prevent having to redo downlods after debugging or changes in the code.
 Refactor in OOP
 Add unit tests
 
