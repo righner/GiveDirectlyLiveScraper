@@ -268,7 +268,6 @@ Add sentiment analysis using Flink.
 Cache persistently, i.e. on Google Cloud Storage.
 
 ### Scraper
-Refactor in OOP
 Add unit tests
 
 
@@ -281,5 +280,4 @@ While there are some [hacky workarounds](https://discuss.streamlit.io/t/has-anyo
 
 ## Current questions
 - What is the best way to parallelize my scraper? Now dask.
-- How could the scraper be refactored using OOP, and what would be the benefits?
 

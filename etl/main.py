@@ -1,42 +1,34 @@
 ### Requirements ###
 #system
-import sys
-
+from datetime import datetime
+import os
 import logging
-#logging.basicConfig(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log', encoding='utf-8', level=logging.INFO) #For local logging
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        #logging.FileHandler(filename=os.getcwd()+'/logs/'+str(datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))+'_scraper.log'),
+        logging.StreamHandler()
+    ]
+)
 from timer import Timer
 
 #own modules 
 import gbq_functions
 import scraper
+import update
 import gender_table
 
-def main(start_rid=158000,interval=10,number_batches=62,batch_size=100,refresh_gender=True,from_files=True): #Standard samples about 10% of the platform, i.e. every 10th profile until ID 220000
+def main(start_rid =158000,final_rid=220000,interval = 10,parser = 'lxml',batch_size = 100,no_dryrun = True, only_update = True, from_files = True,file_directory = "html",refresh_gender=True): #Standard samples about 10% of the platform, i.e. every 10th profile until ID 220000
     """
-    Executes the scraper 
-
-    Parameters
-    ----------
-    start_rid : int
-        The recipient ID from which to start loading the GD-Live profile. Please not that the minimum is around 158000.
-    interval : int
-        The interval at which to sample rid's.
-    number_batches : int
-        The number of batches to load.    
-    batch_size: int
-        The size of each batch
-    refresh_gender: bool
-        If True, the gender table will be recreated as well
-    from_files: bool
-        If True, the scraper will look for html files stored in the "html" folder, otherwise profiles will be scraped directly.
+    Updates the Database
     """
 
     #1 Create tables      
     gbq_functions.try_create_recipient_response_tables() #create tables, if not existing
 
     #2 Scrape data
-    scraper.main(start_rid,interval,number_batches,batch_size,no_dryrun=True,from_files=from_files)
+    update.main(start_rid,final_rid,interval,parser ,batch_size,no_dryrun, only_update, from_files,file_directory)
     
     #3 delete outdated recipient data
     gbq_functions.delete_old_participant_details() 
@@ -51,16 +43,16 @@ def main(start_rid=158000,interval=10,number_batches=62,batch_size=100,refresh_g
 
 if __name__ == "__main__":
     from sys import argv
-    if len(argv) == 7:
+    if len(argv) == 11:
         total = Timer()
         total.start()
-        main(start_rid=argv[1],interval=int(argv[2]),number_batches=int(argv[3]),batch_size=int(argv[4]),refresh_gender=eval(argv[5]),from_files=eval(argv[6]))
+        main(start_rid =argv[1],final_rid=argv[2],interval = argv[3],parser = argv[4],batch_size = argv[5],no_dryrun = eval(argv[6]), only_update = eval(argv[7]), from_files = eval(argv[8]),file_directory = argv[9],refresh_gender=eval(argv[10]))
         logging.info(total.stop())
     elif len(argv) == 1:
         total = Timer()
         total.start()
-        logging.info("Running with default values: start_rid=158000,interval=10,number_batches=62,batch_size=100,refresh_gender=True,from_files=True")
+        logging.info("Running with default values: start_rid =158000,final_rid=220000,interval = 10,parser = 'lxml',batch_size = 100,no_dryrun = True, only_update = True, from_files = True,file_directory = 'html',refresh_gender=True")
         main()
         logging.info(total.stop())
     else:
-        logging.error("Incorrect number of arguments passed. Should be 6: start_rid,interval ,number_batches ,batch_size,refesh_gender,from_files")
+        logging.error("Incorrect number of arguments passed. Should be none or all (10): start_rid,final_rid,interval,parser ,batch_size,no_dryrun, only_update, from_files,file_directory,refresh_gender")

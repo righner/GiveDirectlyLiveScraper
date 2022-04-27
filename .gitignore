@@ -7,3 +7,4 @@ local_client.py
 *.tar.gz
 archive
 html
+wget-log*
