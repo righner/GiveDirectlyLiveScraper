@@ -6,11 +6,11 @@
 #.SHELLFLAGS := -eu -o pipefail -c #stop pipeline in case of error
 
 start=158000
-interval=1000
+interval=10
 finish=220000
 bucket=gs://gdliveproject_htmls/
 
-run-to: archive
+run-to: nuke
 
 complete_rids:
 	bq query --format csv --max_rows 10000 --use_legacy_sql=false "SELECT DISTINCT recipient_id FROM gdliveproject.tests.recipients WHERE completed = True" > $@

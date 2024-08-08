@@ -1,5 +1,7 @@
 # A list of funtions for extracting and loading data to/from Google BigQuery
 from google.cloud import bigquery
+from google.cloud import storage
+import tarfile
 
 import logging
 import nltk
@@ -8,10 +10,12 @@ import sys,os
 sys.path.append('./') #put other folders on path
 if os.getcwd() == "/app/gdlive-explorer":  #If on streamlit cloud, get client via streamlit secrets  
     from streamlit_app.streamlit_cloud_client import get_stcloud_client
-    client = get_stcloud_client()
+    bq_client = get_stcloud_client()
+    storage_client = storage.Client()
 else: #if on local machine or GCP, get it from the local/GCP environment
-    #os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "gcp_key.json" #Needed on local machine
-    client = bigquery.Client()
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "gcp_key.json" #Needed on local machine
+    bq_client = bigquery.Client()
+    storage_client = storage.Client()
 
 def load_recipient(payload):
     """
@@ -39,7 +43,7 @@ def load_recipient(payload):
         schema=schema,
         #write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
         )
-    job = client.load_table_from_json(payload, "gdliveproject.tests.recipients",job_config=job_config)
+    job = bq_client.load_table_from_json(payload, "gdliveproject.tests.recipients",job_config=job_config)
     try:
         job.result()
         logging.info("details of recipients loaded")
@@ -72,7 +76,7 @@ def load_response(payload):
     job_config = bigquery.LoadJobConfig(
         schema=schema,
         )
-    job = client.load_table_from_json(payload, "gdliveproject.tests.responses",job_config=job_config)
+    job = bq_client.load_table_from_json(payload, "gdliveproject.tests.responses",job_config=job_config)
     try:
         job.result()
         logging.info("responses loaded")
@@ -110,12 +114,12 @@ def replace_gender_table(payload):
     write_disposition="WRITE_TRUNCATE",
     )
 
-    job = client.load_table_from_dataframe(
+    job = bq_client.load_table_from_dataframe(
         payload, "gdliveproject.tests.gender", job_config=job_config
     )  # Make an API request.
     job.result()  # Wait for the job to complete.
 
-    table = client.get_table("gdliveproject.tests.gender")  # Make an API request.
+    table = bq_client.get_table("gdliveproject.tests.gender")  # Make an API request.
     logging.info(
         "Loaded {} rows and {} columns to {}".format(
             table.num_rows, len(table.schema), "gdliveproject.tests.gender"
@@ -139,7 +143,7 @@ def get_complete_rids():
     WHERE completed = True
     """
     # labelling our query job
-    job = client.query(query)
+    job = bq_client.query(query)
     
     # results as a dataframe
     return job.result().to_dataframe()
@@ -159,7 +163,7 @@ def get_complete_surveys():
     FROM gdliveproject.tests.responses
     """
     # labelling our query job
-    job = client.query(query)
+    job = bq_client.query(query)
     
     # results as a dataframe
     return job.result().to_dataframe()
@@ -180,7 +184,7 @@ def get_names():
     ORDER BY name
     """
     # labelling our query job
-    job = client.query(query)
+    job = bq_client.query(query)
     
     # results as a dataframe
     return job.result().to_dataframe()
@@ -216,7 +220,7 @@ def delete_old_participant_details():
     ALTER TABLE gdliveproject.tests.updated RENAME TO recipients    
         """
 
-    job = client.query(query)
+    job = bq_client.query(query)
     job.result()
     logging.info("Old rids deleted")
 
@@ -251,7 +255,7 @@ def try_create_recipient_response_tables():
     );  
             """
 
-    job = client.query(query)
+    job = bq_client.query(query)
     job.result()
     logging.info("Recipient & response tables created (if not existing)")
 
@@ -270,7 +274,7 @@ def create_aggregate_table():
     ON recipients.recipient_id = responses.recipient_id
     GROUP BY gender,recipients.campaign,responses.payment,responses.usdollar,responses.question;
     """
-    job = client.query(query)
+    job = bq_client.query(query)
     
     # results as a dataframe
     df = job.result().to_dataframe()
@@ -296,7 +300,7 @@ def create_aggregate_table():
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
         )
 
-    job = client.load_table_from_dataframe(
+    job = bq_client.load_table_from_dataframe(
         df, "gdliveproject.tests.GDLive_aggregate" , job_config=job_config
     )  # Make an API request.
     job.result()
@@ -319,8 +323,26 @@ def get_aggregate_data():
     FROM `gdliveproject.tests.GDLive_aggregate`
     """
     # labelling our query job
-    job = client.query(query)
+    job = bq_client.query(query)
     
     # results as a dataframe
     df = job.result().to_dataframe()
     return df[df['usdollar'] < 1000]
+
+
+def download_unpack_htmls(bucket_name, file_name, file_directory):
+    """Downloads and unpacks profile htmls from Google Cloud Storage."""
+ 
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(file_name)
+    blob.download_to_filename(file_name)
+
+    logging.info("Zipped files loaded")
+
+    file = tarfile.open(file_name)
+    file.extractall('./'+file_directory)
+    file.close()
+
+    os.remove(file_name)
+
+    logging.info("HTML files unpacked to ./"+file_directory)

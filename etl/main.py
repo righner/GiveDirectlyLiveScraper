@@ -15,7 +15,6 @@ from timer import Timer
 
 #own modules 
 import gbq_functions
-import scraper
 import update
 import gender_table
 
@@ -27,17 +26,25 @@ def main(start_rid =158000,final_rid=220000,interval = 10,parser = 'lxml',batch_
     #1 Create tables      
     gbq_functions.try_create_recipient_response_tables() #create tables, if not existing
 
+    #3 Download files      
+    if from_files:
+        file_name = datetime.now().strftime("%Y%m")+".tar.gz"
+        gbq_functions.download_unpack_htmls("gdliveproject_htmls",file_name,file_directory)
+
     #2 Scrape data
     update.main(start_rid,final_rid,interval,parser ,batch_size,no_dryrun, only_update, from_files,file_directory)
+
+    #3 Remove files      
+    os.rmdir(file_directory)
     
-    #3 delete outdated recipient data
+    #5 delete outdated recipient data
     gbq_functions.delete_old_participant_details() 
     
-    #4 refresh the gender table
+    #6 refresh the gender table
     if refresh_gender: #Skip in case there aren't enough credits left on Namsor
         gender_table.main()
 
-    #5 create the aggregate table
+    #7 create the aggregate table
     gbq_functions.create_aggregate_table()
 
 
